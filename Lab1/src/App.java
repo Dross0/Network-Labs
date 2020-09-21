@@ -1,17 +1,22 @@
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class App {
+    private static final Logger logger = Logger.getLogger(App.class.getName());
+
+    private final int messageInterval;
+    private final int ttl;
     private InetAddress address;
     private int port;
     private HashMap<String, Long> lastMessages = new HashMap<>();
-    private final int MESSAGES_INTERVAL = 100;
-    private final int TTL = 1000;
 
-    public App(InetAddress address, int port){
+    public App(InetAddress address, int port, int messageInterval, int ttl){
         this.address = address;
         this.port = port;
+        this.messageInterval = messageInterval;
+        this.ttl = ttl;
     }
 
     private void sendMessage(DatagramSocket socket, String message) throws IOException {
@@ -24,6 +29,10 @@ public class App {
         return address + ":" + port;
     }
 
+    private long getCurrentTime(){
+        return System.currentTimeMillis();
+    }
+
     public void run() throws IOException {
         MulticastSocket recvSocket = new MulticastSocket(port);
         DatagramSocket sendSocket = new DatagramSocket();
@@ -32,15 +41,15 @@ public class App {
             @Override
             public void run() {
                 try {
-                    sendMessage(sendSocket, "CHECK_COPY");
+                    sendMessage(sendSocket, "");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         };
-        timer.schedule(sendTask, 0, MESSAGES_INTERVAL);
+        timer.schedule(sendTask, 0, this.messageInterval);
         byte [] buffer = new byte[1024];
-        recvSocket.setSoTimeout(100);
+        //recvSocket.setSoTimeout(100);
         recvSocket.joinGroup(this.address);
         while (true){
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -53,18 +62,18 @@ public class App {
             }
             String id = getIdByAddressAndPort(packet.getAddress(), packet.getPort());
             if (!lastMessages.containsKey(id)){
-                System.out.println("App with id = " + id + " was registered");
+                logger.info("App with id = " + id + " was registered");
             }
-            removeUnavailable(System.currentTimeMillis());
-            lastMessages.put(id, System.currentTimeMillis());
+            removeUnavailable(getCurrentTime());
+            lastMessages.put(id, getCurrentTime());
         }
     }
 
     private void removeUnavailable(long currentTimeMillis) {
         for (Iterator<Map.Entry<String, Long>> it = this.lastMessages.entrySet().iterator(); it.hasNext();){
             Map.Entry<String, Long> entry = it.next();
-            if (currentTimeMillis - entry.getValue() > TTL){
-                System.out.println("App with id = " + entry.getKey() + " was unconnected");
+            if (currentTimeMillis - entry.getValue() > this.ttl){
+                logger.info("App with id = " + entry.getKey() + " was unconnected");
                 it.remove();
             }
         }
