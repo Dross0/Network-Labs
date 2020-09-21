@@ -1,1 +1,2 @@
-# NetworkNSU
+# Лабораторные работы по курсу "Сети и телекоммуникаций" НГУ
+1. [Обнаружение копий себя в локальной сети](https://github.com/Dross0/NetworkNSU/tree/master/Lab1)
