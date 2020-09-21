@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.*;
 import java.util.*;
 import java.util.logging.Logger;
@@ -11,6 +12,7 @@ public class App {
     private InetAddress address;
     private int port;
     private HashMap<String, Long> lastMessages = new HashMap<>();
+    private final String DEFAULT_MESSAGE = "";
 
     public App(InetAddress address, int port, int messageInterval, int ttl){
         this.address = address;
@@ -36,20 +38,20 @@ public class App {
     public void run() throws IOException {
         MulticastSocket recvSocket = new MulticastSocket(port);
         DatagramSocket sendSocket = new DatagramSocket();
-        Timer timer = new Timer();
-        TimerTask sendTask = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    sendMessage(sendSocket, "");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        timer.schedule(sendTask, 0, this.messageInterval);
+//        Timer timer = new Timer();
+//        TimerTask sendTask = new TimerTask() {
+//            @Override
+//            public void run() {
+//                try {
+//                    sendMessage(sendSocket, DEFAULT_MESSAGE);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        };
+//        timer.schedule(sendTask, 0, this.messageInterval);
         byte [] buffer = new byte[1024];
-        //recvSocket.setSoTimeout(100);
+        recvSocket.setSoTimeout(this.messageInterval);
         recvSocket.joinGroup(this.address);
         while (true){
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -57,9 +59,15 @@ public class App {
                 recvSocket.receive(packet);
             }
             catch (SocketTimeoutException ex){
-                //sendMessage(sendSocket, "CHECK_COPY");
+                sendMessage(sendSocket, DEFAULT_MESSAGE);
                 continue;
             }
+            catch (IOException ex){
+                recvSocket.close();
+                sendSocket.close();
+                return;
+            }
+
             String id = getIdByAddressAndPort(packet.getAddress(), packet.getPort());
             if (!lastMessages.containsKey(id)){
                 logger.info("App with id = " + id + " was registered");
