@@ -36,8 +36,8 @@ public class App {
     }
 
     public void run() throws IOException {
-        MulticastSocket recvSocket = new MulticastSocket(port);
-        DatagramSocket sendSocket = new DatagramSocket();
+        final MulticastSocket recvSocket = new MulticastSocket(port);
+        final DatagramSocket sendSocket = new DatagramSocket();
 //        Timer timer = new Timer();
 //        TimerTask sendTask = new TimerTask() {
 //            @Override
@@ -53,27 +53,27 @@ public class App {
         byte [] buffer = new byte[1024];
         recvSocket.setSoTimeout(this.messageInterval);
         recvSocket.joinGroup(this.address);
-        while (true){
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-            try {
-                recvSocket.receive(packet);
-            }
-            catch (SocketTimeoutException ex){
-                sendMessage(sendSocket, DEFAULT_MESSAGE);
-                continue;
-            }
-            catch (IOException ex){
-                recvSocket.close();
-                sendSocket.close();
-                return;
-            }
+        try (recvSocket; sendSocket){
+            while (true) {
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                try {
+                    recvSocket.receive(packet);
+                } catch (SocketTimeoutException ex) {
+                    sendMessage(sendSocket, DEFAULT_MESSAGE);
+                    continue;
+                } catch (IOException ex) {
+                    recvSocket.close();
+                    sendSocket.close();
+                    return;
+                }
 
-            String id = getIdByAddressAndPort(packet.getAddress(), packet.getPort());
-            if (!lastMessages.containsKey(id)){
-                logger.info("App with id = " + id + " was registered");
+                String id = getIdByAddressAndPort(packet.getAddress(), packet.getPort());
+                if (!lastMessages.containsKey(id)) {
+                    logger.info("App with id = " + id + " was registered");
+                }
+                removeUnavailable(getCurrentTime());
+                lastMessages.put(id, getCurrentTime());
             }
-            removeUnavailable(getCurrentTime());
-            lastMessages.put(id, getCurrentTime());
         }
     }
 
