@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -61,12 +62,7 @@ public class App {
                 } catch (SocketTimeoutException ex) {
                     sendMessage(sendSocket, DEFAULT_MESSAGE);
                     continue;
-                } catch (IOException ex) {
-                    recvSocket.close();
-                    sendSocket.close();
-                    return;
                 }
-
                 String id = getIdByAddressAndPort(packet.getAddress(), packet.getPort());
                 if (!lastMessages.containsKey(id)) {
                     logger.info("App with id = " + id + " was registered");
@@ -74,6 +70,9 @@ public class App {
                 removeUnavailable(getCurrentTime());
                 lastMessages.put(id, getCurrentTime());
             }
+        }
+        catch (IOException ex){
+            logger.log(Level.SEVERE, ex.getMessage());
         }
     }
 
