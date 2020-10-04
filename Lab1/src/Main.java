@@ -31,6 +31,16 @@ public class Main {
             logger.info("Message interval has default value = " + DEFAULT_MESSAGE_INTERVAL);
             logger.info("TTL has default value = " + DEFAULT_TTL);
         }
+        if (fis != null) {
+            fis.close();
+        }
+        if (!checkTTLAndMessageInterval(ttl, messageInterval)){
+            ttl = DEFAULT_TTL;
+            messageInterval = DEFAULT_MESSAGE_INTERVAL;
+            logger.warning("Bad params");
+            logger.info("Message interval has default value = " + DEFAULT_MESSAGE_INTERVAL);
+            logger.info("TTL has default value = " + DEFAULT_TTL);
+        }
         int port = DEFAULT_PORT;
         try {
             if (args.length >= 2) {
@@ -49,5 +59,9 @@ public class Main {
         }
         App app = new App(InetAddress.getByName(multicastIP), port, messageInterval, ttl);
         app.run();
+    }
+
+    private static boolean checkTTLAndMessageInterval(int ttl, int messageInterval){
+        return messageInterval >= 0 && ttl >= messageInterval;
     }
 }
