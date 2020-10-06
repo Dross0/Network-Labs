@@ -81,9 +81,9 @@ public class ClientRequestHandler implements Runnable {
         if (!Files.exists(dirPath)) {
             Files.createDirectory(dirPath);
         }
-        Path path = Paths.get(dirPath + "/" + filename);
+        Path path = Paths.get(dirPath + System.getProperty("file.separator") + filename);
         if (Files.exists(path)){
-            path = Paths.get(dirPath + "/" + generateRandomFileName(filename));
+            path = Paths.get(dirPath + System.getProperty("file.separator") + generateRandomFileName(filename));
         }
         Files.createFile(path);
         return path;
