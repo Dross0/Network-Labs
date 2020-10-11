@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 
 public class ClientRequestHandler implements Runnable {
     private final static Logger logger = Logger.getLogger(ClientRequestHandler.class.getName());
-    private final long SPEED_TEST_INTERVAL = 100;
+    private final long SPEED_TEST_INTERVAL = 3000;
     private final int BUFFER_SIZE = 1024;
 
     private final Socket socket;
@@ -39,6 +39,7 @@ public class ClientRequestHandler implements Runnable {
             try (OutputStream fileWriter = Files.newOutputStream(path)) {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 long allReadBytes = 0;
+                long prevAllReadBytes = 0;
                 long initTime = System.currentTimeMillis();
                 long lastTime = initTime;
                 boolean clientActiveLessSpeedTestInterval = true;
@@ -52,11 +53,12 @@ public class ClientRequestHandler implements Runnable {
                     allReadBytes += readBytes;
                     long currentTime = System.currentTimeMillis();
                     if (currentTime - lastTime > SPEED_TEST_INTERVAL){
-                        long currentSpeed = readBytes * 1000 / (currentTime - lastTime);
+                        long currentSpeed = (allReadBytes - prevAllReadBytes) * 1000 / (currentTime - lastTime);
                         long avgSpeed = allReadBytes * 1000 / (currentTime - initTime);
                         logger.info("File - {" + path.getFileName() +"} has current speed = " + currentSpeed + ", avg speed = " + avgSpeed);
                         lastTime = currentTime;
                         clientActiveLessSpeedTestInterval = false;
+                        prevAllReadBytes = allReadBytes;
                     }
                 }
                 if (clientActiveLessSpeedTestInterval){
