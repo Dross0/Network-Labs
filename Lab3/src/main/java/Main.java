@@ -1,3 +1,5 @@
+import chatnode.ChatNode;
+import chatnode.ChatNodeConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +63,7 @@ public class Main {
                         .neighborPort(neighborPort.get());
             }
             ChatNodeConfig nodeConfig = configBuilder.build();
-            ChatNode node = new ChatNode(nodeConfig);
+            ChatNode node = new ChatNode(nodeConfig, System.in);
         } catch (IllegalArgumentException e){
             logger.error("Port or loss percentage is not valid", e);
         }

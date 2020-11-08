@@ -1,12 +1,16 @@
+package chatnode;
+
 import org.jetbrains.annotations.NotNull;
+import utils.LossPercentageValidator;
+import utils.PortValidator;
 
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.Objects;
 
 public class ChatNodeConfig implements Serializable {
-    private static final int MIN_LOSS_PERCENTAGE = 0;
-    private static final int MAX_LOSS_PERCENTAGE = 100;
+    private static final int DEFAULT_NEIGHBOR_PORT = -1;
+
     private final String name;
     private final int lossPercentage;
     private final int port;
@@ -21,13 +25,13 @@ public class ChatNodeConfig implements Serializable {
 
         //Опциональные параметры
         private InetAddress neighborAddress = InetAddress.getLoopbackAddress();
-        private int neighborPort = -1;
+        private int neighborPort = DEFAULT_NEIGHBOR_PORT;
 
         public Builder(@NotNull String name, int lossPercentage, int port){
             this.name = Objects.requireNonNull(name, "Node name cant be null");
-            validateLossPercentage(lossPercentage);
+            LossPercentageValidator.validate(lossPercentage);
             this.lossPercentage = lossPercentage;
-            validatePort(port);
+            PortValidator.validate(port);
             this.port = port;
         }
 
@@ -37,7 +41,7 @@ public class ChatNodeConfig implements Serializable {
         }
 
         public Builder neighborPort(int neighborPort){
-            validatePort(neighborPort);
+            PortValidator.validate(neighborPort);
             this.neighborPort = neighborPort;
             return this;
         }
@@ -53,21 +57,6 @@ public class ChatNodeConfig implements Serializable {
         this.port = builder.port;
         this.neighborAddress = builder.neighborAddress;
         this.neighborPort = builder.neighborPort;
-    }
-
-    private static void validatePort(int port){
-        if (port < 0){
-            throw new IllegalArgumentException("Port must be positive, actual = {"
-                    + port + "}");
-        }
-    }
-
-    private static void validateLossPercentage(int lossPercentage){
-        if (lossPercentage < MIN_LOSS_PERCENTAGE || lossPercentage > MAX_LOSS_PERCENTAGE){
-            throw new IllegalArgumentException("Loss percentage not from valid interval = ["
-                    + MIN_LOSS_PERCENTAGE + ", "
-                    + MAX_LOSS_PERCENTAGE + "]");
-        }
     }
 
     @NotNull
@@ -90,6 +79,10 @@ public class ChatNodeConfig implements Serializable {
 
     public int getNeighborPort() {
         return neighborPort;
+    }
+
+    public boolean hasNeighborInfo(){
+        return neighborPort != DEFAULT_NEIGHBOR_PORT && !neighborAddress.isLoopbackAddress();
     }
 
     @Override
