@@ -22,19 +22,18 @@ public class MessageSender extends Thread{
     private final List<Message> confirmedMessages;
     private final List<Message>  sentMessages;
     private final List<Message> messagesToSend;
-    private final List<NetNode> neighbors;
+    private final List<Neighbor> neighbors;
     private final DatagramSocket socket;
 
 
     public MessageSender(@NotNull DatagramSocket socket,
                          @NotNull List<Message>  confirmedMessages,
-                         @NotNull List<Message>  sentMessages,
-                         @NotNull List<NetNode> neighbors) {
+                         @NotNull List<Neighbor> neighbors) {
         this.confirmedMessages = Objects.requireNonNull(confirmedMessages, "Confirmed messages list cant be null");
-        this.sentMessages = Objects.requireNonNull(sentMessages, "Sent messages list cant be null");
         this.neighbors = Objects.requireNonNull(neighbors, "Neighbors list cant be null");
         this.socket = Objects.requireNonNull(socket, "Socket cant be null");
         this.messagesToSend = new ArrayList<>();
+        this.sentMessages = new ArrayList<>();
     }
 
     @Override
@@ -50,7 +49,8 @@ public class MessageSender extends Thread{
         }
     }
 
-    public void sendMessage(Message message){
+    public void sendMessage(@NotNull Message message){
+        Objects.requireNonNull(message, "Message cant be null");
         synchronized (messagesToSend){
             messagesToSend.add(message);
         }
@@ -59,6 +59,15 @@ public class MessageSender extends Thread{
     private void sendAllNewMessages(){
         synchronized (messagesToSend){
             messagesToSend.forEach(this::sendMessageToNode);
+            messagesToSend.removeIf(message -> !message.getMessageType().isNeedsConfirmation());
+            addNewSentMessages(messagesToSend);
+            messagesToSend.clear();
+        }
+    }
+
+    private void addNewSentMessages(List<Message> newSentMessages){
+        synchronized (sentMessages){
+            sentMessages.addAll(newSentMessages);
         }
     }
 

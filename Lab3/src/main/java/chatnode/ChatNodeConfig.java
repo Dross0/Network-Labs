@@ -7,6 +7,7 @@ import utils.PortValidator;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.Objects;
+import java.util.Optional;
 
 public class ChatNodeConfig implements Serializable {
     private static final int DEFAULT_NEIGHBOR_PORT = -1;
@@ -24,7 +25,7 @@ public class ChatNodeConfig implements Serializable {
         private final int port;
 
         //Опциональные параметры
-        private InetAddress neighborAddress = InetAddress.getLoopbackAddress();
+        private InetAddress neighborAddress = null;
         private int neighborPort = DEFAULT_NEIGHBOR_PORT;
 
         public Builder(@NotNull String name, int lossPercentage, int port){
@@ -72,9 +73,8 @@ public class ChatNodeConfig implements Serializable {
         return port;
     }
 
-    @NotNull
-    public InetAddress getNeighborAddress() {
-        return neighborAddress;
+    public Optional<InetAddress> getNeighborAddress() {
+        return Optional.ofNullable(neighborAddress);
     }
 
     public int getNeighborPort() {
@@ -82,7 +82,7 @@ public class ChatNodeConfig implements Serializable {
     }
 
     public boolean hasNeighborInfo(){
-        return neighborPort != DEFAULT_NEIGHBOR_PORT && !neighborAddress.isLoopbackAddress();
+        return neighborPort != DEFAULT_NEIGHBOR_PORT && neighborAddress != null;
     }
 
     @Override

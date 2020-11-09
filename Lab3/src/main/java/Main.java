@@ -62,8 +62,8 @@ public class Main {
                         .neighborAddress(neighborAddress.get())
                         .neighborPort(neighborPort.get());
             }
-            ChatNodeConfig nodeConfig = configBuilder.build();
-            ChatNode node = new ChatNode(nodeConfig, System.in);
+            ChatNode node = new ChatNode(configBuilder.build(), System.in);
+            node.start();
         } catch (IllegalArgumentException e){
             logger.error("Port or loss percentage is not valid", e);
         }

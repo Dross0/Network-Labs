@@ -3,10 +3,11 @@ package chatnode;
 import org.jetbrains.annotations.NotNull;
 import utils.PortValidator;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.Objects;
 
-public class NetNode {
+public class NetNode implements Serializable {
     private final InetAddress address;
     private final int port;
 

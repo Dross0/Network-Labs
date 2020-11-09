@@ -3,10 +3,21 @@ package message;
 import chatnode.NetNode;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 public class TextMessage extends Message {
-    public TextMessage(@NotNull String message,
+    private final String senderName;
+
+    public TextMessage(@NotNull String text,
                        @NotNull NetNode senderNode,
-                       @NotNull NetNode receiverNode) {
-        super(message, MessageType.TEXT, senderNode, receiverNode);
+                       @NotNull NetNode receiverNode,
+                       @NotNull String senderName) {
+        super(text, MessageType.TEXT, senderNode, receiverNode);
+        this.senderName = Objects.requireNonNull(senderName, "Sender name cant be null");
+    }
+
+    @NotNull
+    public String getSenderName() {
+        return senderName;
     }
 }

@@ -1,6 +1,5 @@
 package message;
 
-import chatnode.ChatNodeConfig;
 import chatnode.NetNode;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,17 +9,17 @@ import java.util.UUID;
 
 public abstract class Message implements Serializable {
     private final NetNode senderNode;
-    private final String message;
+    private final String text;
     private final UUID uuid;
     private final MessageType messageType;
     private final NetNode receiverNode;
 
-    public Message(@NotNull String message,
+    public Message(@NotNull String text,
                    @NotNull MessageType messageType,
                    @NotNull NetNode senderNode,
                    @NotNull NetNode receiverNode) {
         this.senderNode = Objects.requireNonNull(senderNode, "Sender cant be null");
-        this.message = Objects.requireNonNull(message, "Message cant be null");
+        this.text = Objects.requireNonNull(text, "Message cant be null");
         this.messageType = Objects.requireNonNull(messageType, "Message type cant be null");
         this.receiverNode = Objects.requireNonNull(receiverNode, "Receiver cant be null");
         this.uuid = UUID.randomUUID();
@@ -37,8 +36,8 @@ public abstract class Message implements Serializable {
     }
 
     @NotNull
-    public String getMessage() {
-        return message;
+    public String getText() {
+        return text;
     }
 
     @NotNull
