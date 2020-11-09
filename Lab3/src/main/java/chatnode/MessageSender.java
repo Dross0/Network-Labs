@@ -6,21 +6,23 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.DurationUtils;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 
 public class MessageSender extends Thread{
     private static final Logger logger = LoggerFactory.getLogger(MessageSender.class);
 
     private static final int SEND_INTERVAL_MS = 100;
+    private static final int RESEND_UNCONFIRMED_MESSAGES_INTERVAL_MS = 300;
 
     private final List<Message> confirmedMessages;
-    private final List<Message>  sentMessages;
+    private final Map<Message, Instant> sentMessages;
     private final List<Message> messagesToSend;
     private final List<Neighbor> neighbors;
     private final DatagramSocket socket;
@@ -33,7 +35,7 @@ public class MessageSender extends Thread{
         this.neighbors = Objects.requireNonNull(neighbors, "Neighbors list cant be null");
         this.socket = Objects.requireNonNull(socket, "Socket cant be null");
         this.messagesToSend = new ArrayList<>();
-        this.sentMessages = new ArrayList<>();
+        this.sentMessages = new HashMap<>();
     }
 
     @Override
@@ -67,15 +69,20 @@ public class MessageSender extends Thread{
 
     private void addNewSentMessages(List<Message> newSentMessages){
         synchronized (sentMessages){
-            sentMessages.addAll(newSentMessages);
+            //sentMessages.addAll(newSentMessages);
         }
     }
 
     private void resendUnconfirmedMessages(){
         synchronized (sentMessages){
-            sentMessages.removeIf(this::checkDeliveryConfirmation);
-            sentMessages.removeIf(this::isMessageToNotNeighbor);
-            sentMessages.forEach(this::sendMessageToNode);
+            sentMessages.keySet().removeIf(this::checkDeliveryConfirmation);
+            sentMessages.keySet().removeIf(this::isMessageToNotNeighbor);
+            Instant now = Instant.now();
+            sentMessages.forEach((message, instant) -> {
+                if (DurationUtils.milliSecondsBetweenTwoInstants(instant, now) >= RESEND_UNCONFIRMED_MESSAGES_INTERVAL_MS){
+                    sendMessageToNode(message);
+                }
+            });
         }
     }
 

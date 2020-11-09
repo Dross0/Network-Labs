@@ -8,26 +8,38 @@ import java.util.Objects;
 import java.util.Optional;
 
 
-public class Neighbor extends NetNode{
+public class Neighbor extends NetNode {
+    public static final Neighbor nullNeighbor = new Neighbor(InetAddress.getLoopbackAddress(), 0, true);
+
+    private final boolean isNullObject;
     private Instant lastSeen;
     private NetNode replacementNode;
 
-    public Neighbor(@NotNull InetAddress address, int port){
+    private Neighbor(@NotNull InetAddress address, int port, boolean isNullObject) {
         super(address, port);
+        this.isNullObject = isNullObject;
         this.lastSeen = Instant.now();
         this.replacementNode = null;
     }
 
-    public void setReplacementNode(@NotNull NetNode replacementNode){
+    public Neighbor(@NotNull InetAddress address, int port) {
+        this(address, port, false);
+    }
+
+    public void setReplacementNode(@NotNull NetNode replacementNode) {
         this.replacementNode = Objects.requireNonNull(replacementNode, "Replacement node cant be null");
     }
 
+    public boolean isNull() {
+        return isNullObject;
+    }
+
     @NotNull
-    public Optional<NetNode> getReplacementNode(){
+    public Optional<NetNode> getReplacementNode() {
         return Optional.ofNullable(replacementNode);
     }
 
-    public Neighbor(@NotNull NetNode node){
+    public Neighbor(@NotNull NetNode node) {
         this(node.getAddress(), node.getPort());
     }
 
@@ -36,7 +48,9 @@ public class Neighbor extends NetNode{
         return lastSeen;
     }
 
-    public void updateLastSeen(){
+    public void updateLastSeen() {
         lastSeen = Instant.now();
     }
+
+
 }

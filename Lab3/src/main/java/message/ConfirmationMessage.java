@@ -8,10 +8,9 @@ import java.util.Objects;
 public class ConfirmationMessage extends Message {
     private final Message confirmedMessage;
 
-    public ConfirmationMessage(@NotNull NetNode senderNode,
-                               @NotNull NetNode receiverNode,
+    public ConfirmationMessage(@NotNull NetNode receiverNode,
                                @NotNull Message confirmedMessage) {
-        super("", MessageType.CONFIRM, senderNode, receiverNode);
+        super("", MessageType.CONFIRM, receiverNode);
         this.confirmedMessage = Objects.requireNonNull(confirmedMessage, "Confirmed message cant be null");
     }
 

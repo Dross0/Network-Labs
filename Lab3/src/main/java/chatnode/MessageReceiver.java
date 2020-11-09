@@ -20,7 +20,7 @@ import java.util.Random;
 public class MessageReceiver extends Thread {
     private static final Logger logger = LoggerFactory.getLogger(MessageReceiver.class);
 
-    private static final int PACKET_SIZE = 1024;
+    private static final int PACKET_SIZE = 4096;
     private static final int DEFAULT_LOSS_PERCENTAGE = 0;
     private static final int RECEIVE_INTERVAL_MS = 100;
 
@@ -29,22 +29,18 @@ public class MessageReceiver extends Thread {
     private final List<Neighbor> neighbors;
     private final DatagramSocket socket;
     private final int lossPercentage;
-    private NetNode replacementNode;
-    private final NetNode nodeInfo;
+    private NetNode replacementNode = Neighbor.nullNeighbor;
 
     public MessageReceiver(@NotNull DatagramSocket socket,
                            @NotNull MessageSender sender,
                            @NotNull List<Message> confirmedMessages,
                            @NotNull List<Neighbor> neighbors,
-                           @NotNull NetNode replacementNode,
                            int lossPercentage) {
         this.socket = Objects.requireNonNull(socket, "Socket cant be null");
         this.sender = Objects.requireNonNull(sender, "Sender cant be null");
         this.confirmedMessages = Objects.requireNonNull(confirmedMessages, "Confirmed message list cant be null");
         this.neighbors = Objects.requireNonNull(neighbors, "Neighbors list cant be null");
-        this.replacementNode = Objects.requireNonNull(replacementNode, "Replacement node cant be null");
         this.lossPercentage = processInitLossPercentage(lossPercentage);
-        this.nodeInfo = new NetNode(socket.getLocalAddress(), socket.getLocalPort());
     }
 
     public void setReplacementNode(@NotNull NetNode newReplacementNode){
@@ -75,29 +71,30 @@ public class MessageReceiver extends Thread {
                     continue;
                 }
                 Message message = SerializationUtils.deserialize(packet.getData());
+                NetNode packageSenderNode = new NetNode(packet.getAddress(), packet.getPort());
                 switch (message.getMessageType()){
                     case TEXT:
                         TextMessage textMessage = (TextMessage) message;
                         printTextMessage(textMessage);
-                        sendConfirmationMessage(textMessage);
-                        resendTextMessageToNeighbors(textMessage);
+                        sendConfirmationMessage(packageSenderNode, textMessage);
+                        resendTextMessageToNeighbors(packageSenderNode, textMessage);
                         break;
                     case ALIVE:
-                        updateAliveNeighborLastSeen(message.getSenderNode());
+                        updateAliveNeighborLastSeen(packageSenderNode);
                         break;
                     case CONFIRM:
                         ConfirmationMessage confirmationMessage = (ConfirmationMessage) message;
                         addToConfirmedMessage(confirmationMessage.getConfirmedMessage());
                         break;
                     case CONNECT:
-                        addNeighbor(message.getSenderNode());
-                        sendReplacementNodeShareMessage(message.getSenderNode());
-                        sendConfirmationMessage(message);
+                        addNeighbor(packageSenderNode);
+                        sendReplacementNodeShareMessage(packageSenderNode);
+                        sendConfirmationMessage(packageSenderNode, message);
                         break;
                     case REPLACEMENT_NODE_SHARE:
                         ReplacementNodeShareMessage shareMessage = (ReplacementNodeShareMessage) message;
-                        updateNeighborReplacementNode(shareMessage.getSenderNode(), shareMessage.getReplacementNode());
-                        sendConfirmationMessage(shareMessage);
+                        updateNeighborReplacementNode(packageSenderNode, shareMessage.getReplacementNode());
+                        sendConfirmationMessage(packageSenderNode, shareMessage);
                         break;
                 }
                 sleep(RECEIVE_INTERVAL_MS);
@@ -113,16 +110,14 @@ public class MessageReceiver extends Thread {
 
     private void sendReplacementNodeShareMessage(NetNode receiver){
         sender.sendMessage(new ReplacementNodeShareMessage(
-                nodeInfo,
                 receiver,
                 replacementNode
         ));
     }
 
-    private void sendConfirmationMessage(Message message){
+    private void sendConfirmationMessage(NetNode receiverNode, Message message){
         sender.sendMessage(new ConfirmationMessage(
-                nodeInfo,
-                message.getSenderNode(),
+                receiverNode,
                 message
         ));
     }
@@ -131,6 +126,10 @@ public class MessageReceiver extends Thread {
         synchronized (neighbors) {
             for (Neighbor neighbor : neighbors) {
                 if (neighbor.equals(neighborNode)) {
+                    if (neighbor.equals(replacementNode)){
+                        neighbor.setReplacementNode(Neighbor.nullNeighbor);
+                        logger.info("Null neighbor set to " + neighbor);
+                    }
                     neighbor.setReplacementNode(replacementNode);
                     return;
                 }
@@ -161,13 +160,12 @@ public class MessageReceiver extends Thread {
         }
     }
 
-    private void resendTextMessageToNeighbors(TextMessage textMessage) {
+    private void resendTextMessageToNeighbors(NetNode senderNode, TextMessage textMessage) {
         synchronized (neighbors){
             neighbors.forEach(neighbor -> {
-                if (!neighbor.equals(textMessage.getSenderNode())){
+                if (!neighbor.equals(senderNode)){
                     sender.sendMessage(new TextMessage(
                             textMessage.getText(),
-                            nodeInfo,
                             neighbor,
                             textMessage.getSenderName())
                     );
@@ -183,7 +181,7 @@ public class MessageReceiver extends Thread {
     private void updateAliveNeighborLastSeen(NetNode node){
         synchronized (neighbors) {
             for (Neighbor neighbor : neighbors) {
-                if (neighbor.equals(node)) {
+                if (node.equals(neighbor)) {
                     neighbor.updateLastSeen();
                     return;
                 }

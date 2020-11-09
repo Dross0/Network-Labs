@@ -29,7 +29,7 @@ public class NetNode implements Serializable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof NetNode)) return false;
         NetNode netNode = (NetNode) o;
         return port == netNode.port &&
                 address.equals(netNode.address);
@@ -38,5 +38,13 @@ public class NetNode implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(address, port);
+    }
+
+    @Override
+    public String toString() {
+        return "NetNode{" +
+                "address=" + address +
+                ", port=" + port +
+                '}';
     }
 }

@@ -8,4 +8,9 @@ public final class DurationUtils {
         Duration duration = Duration.between(instant1, instant2);
         return duration.abs().getSeconds();
     }
+
+    public static long milliSecondsBetweenTwoInstants(Instant instant1, Instant instant2){
+        Duration duration = Duration.between(instant1, instant2);
+        return duration.abs().toMillis();
+    }
 }

@@ -9,10 +9,9 @@ public class TextMessage extends Message {
     private final String senderName;
 
     public TextMessage(@NotNull String text,
-                       @NotNull NetNode senderNode,
                        @NotNull NetNode receiverNode,
                        @NotNull String senderName) {
-        super(text, MessageType.TEXT, senderNode, receiverNode);
+        super(text, MessageType.TEXT, receiverNode);
         this.senderName = Objects.requireNonNull(senderName, "Sender name cant be null");
     }
 
