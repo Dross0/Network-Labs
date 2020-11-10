@@ -14,7 +14,7 @@ import java.net.DatagramSocket;
 import java.time.Instant;
 import java.util.*;
 
-public class MessageSender extends Thread{
+public class MessageSender implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(MessageSender.class);
 
     private static final int SEND_INTERVAL_MS = 100;
@@ -39,14 +39,14 @@ public class MessageSender extends Thread{
 
     @Override
     public void run() {
-        while (!isInterrupted()){
+        while (!Thread.currentThread().isInterrupted()) {
             sendAllNewMessages();
             resendUnconfirmedMessages();
             try {
-                sleep(SEND_INTERVAL_MS);
+                Thread.sleep(SEND_INTERVAL_MS);
             } catch (InterruptedException e) {
                 logger.debug("Sleep interrupt", e);
-                break;
+                return;
             }
         }
     }

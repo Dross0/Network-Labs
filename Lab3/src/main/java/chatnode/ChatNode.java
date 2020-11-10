@@ -30,6 +30,8 @@ public class ChatNode implements Closeable {
     private final InputStream inputStream;
     private MessageSender messageSender;
     private MessageReceiver messageReceiver;
+    private Thread messageSenderThread;
+    private Thread messageReceiverThread;
     private Neighbor replacementNode;
     private Timer aliveMessagesSendTimer;
     private Timer neighborsCleaner;
@@ -75,11 +77,13 @@ public class ChatNode implements Closeable {
                     neighbors,
                     initConfig.getLossPercentage()
             );
-            messageSender.start();
-            messageReceiver.start();
-            synchronized (neighbors) {
-                neighbors.forEach(neighbor -> messageSender.sendMessage(new ConnectMessage(neighbor)));
-            }
+            messageSenderThread = new Thread(messageSender);
+            messageSenderThread.setName("Message sender");
+            messageReceiverThread = new Thread(messageReceiver);
+            messageReceiverThread.setName("Message receiver");
+            messageSenderThread.start();
+            messageReceiverThread.start();
+            connectToNeighbors();
             setReplacementNode(chooseReplacementNode());
             startNeighborsCleaner();
             startSendingAliveMessages();
@@ -90,9 +94,15 @@ public class ChatNode implements Closeable {
         }
     }
 
-    private Neighbor chooseReplacementNode(){
-        synchronized (neighbors){
-            if (neighbors.isEmpty()){
+    private void connectToNeighbors() {
+        synchronized (neighbors) {
+            neighbors.forEach(neighbor -> messageSender.sendMessage(new ConnectMessage(neighbor)));
+        }
+    }
+
+    private Neighbor chooseReplacementNode() {
+        synchronized (neighbors) {
+            if (neighbors.isEmpty()) {
                 return Neighbor.nullNeighbor;
             }
             return neighbors.get(0);
@@ -107,8 +117,8 @@ public class ChatNode implements Closeable {
     }
 
     public void stop() {
-        stopThread(messageSender);
-        stopThread(messageReceiver);
+        stopThread(messageSenderThread);
+        stopThread(messageReceiverThread);
         stopThread(textMessagesInput);
         stopTimer(aliveMessagesSendTimer);
         stopTimer(neighborsCleaner);

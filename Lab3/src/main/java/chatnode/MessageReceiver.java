@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
-public class MessageReceiver extends Thread {
+public class MessageReceiver implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(MessageReceiver.class);
 
     private static final int PACKET_SIZE = 4096;
@@ -60,7 +60,7 @@ public class MessageReceiver extends Thread {
     @Override
     public void run() {
         Random randomLossPercentage = new Random();
-        while (!isInterrupted()) {
+        while (!Thread.currentThread().isInterrupted()) {
             DatagramPacket packet = new DatagramPacket(new byte[PACKET_SIZE], PACKET_SIZE);
             try {
                 socket.receive(packet);
@@ -70,7 +70,7 @@ public class MessageReceiver extends Thread {
                 }
                 Message message = SerializationUtils.deserialize(packet.getData());
                 NetNode packageSenderNode = new NetNode(packet.getAddress(), packet.getPort());
-                switch (message.getMessageType()){
+                switch (message.getMessageType()) {
                     case TEXT:
                         TextMessage textMessage = (TextMessage) message;
                         printTextMessage(textMessage);
@@ -101,12 +101,12 @@ public class MessageReceiver extends Thread {
                         sendConfirmationMessage(packageSenderNode, shareMessage);
                         break;
                 }
-                sleep(RECEIVE_INTERVAL_MS);
+                Thread.sleep(RECEIVE_INTERVAL_MS);
             } catch (InterruptedException e) {
                 logger.debug("Sleep interrupted", e);
             } catch (IOException e) {
                 logger.debug("Cant receive packet from socket", e);
-                interrupt();
+                return;
             }
         }
     }
