@@ -27,6 +27,9 @@ public class Neighbor extends NetNode {
     }
 
     public void setReplacementNode(@NotNull NetNode replacementNode) {
+        if (isNull()) {
+            throw new UnsupportedOperationException("Cant set replacement node of null neighbor");
+        }
         this.replacementNode = Objects.requireNonNull(replacementNode, "Replacement node cant be null");
     }
 
@@ -49,8 +52,9 @@ public class Neighbor extends NetNode {
     }
 
     public void updateLastSeen() {
+        if (isNull()) {
+            throw new UnsupportedOperationException("Cant update last seen of null neighbor");
+        }
         lastSeen = Instant.now();
     }
-
-
 }

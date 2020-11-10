@@ -1,3 +1,4 @@
+
 import chatnode.ChatNode;
 import chatnode.ChatNodeConfig;
 import org.jetbrains.annotations.NotNull;
@@ -64,8 +65,10 @@ public class Main {
             }
             ChatNode node = new ChatNode(configBuilder.build(), System.in);
             node.start();
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             logger.error("Port or loss percentage is not valid", e);
+        } catch (IllegalStateException e) {
+            logger.error("Chat node init problem", e);
         }
     }
 

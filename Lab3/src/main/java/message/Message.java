@@ -54,4 +54,17 @@ public abstract class Message implements Serializable {
     public int hashCode() {
         return Objects.hash(uuid);
     }
+
+    @NotNull
+    public String string() {
+        return "Message{" +
+                "text='" + text + '\'' +
+                ", messageType=" + messageType +
+                '}';
+    }
+
+    @Override
+    public String toString() {
+        return string();
+    }
 }

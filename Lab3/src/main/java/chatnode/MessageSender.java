@@ -11,7 +11,6 @@ import utils.DurationUtils;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
@@ -46,7 +45,8 @@ public class MessageSender extends Thread{
             try {
                 sleep(SEND_INTERVAL_MS);
             } catch (InterruptedException e) {
-                logger.error("Sleep interrupt", e);
+                logger.debug("Sleep interrupt", e);
+                break;
             }
         }
     }
@@ -67,9 +67,12 @@ public class MessageSender extends Thread{
         }
     }
 
-    private void addNewSentMessages(List<Message> newSentMessages){
-        synchronized (sentMessages){
-            //sentMessages.addAll(newSentMessages);
+    private void addNewSentMessages(List<Message> newSentMessages) {
+        synchronized (sentMessages) {
+            Instant now = Instant.now();
+            for (Message message : newSentMessages) {
+                sentMessages.put(message, now);
+            }
         }
     }
 
@@ -103,9 +106,14 @@ public class MessageSender extends Thread{
         }
     }
 
-    private boolean isMessageToNotNeighbor(Message message){
-        synchronized (neighbors){
-            return !neighbors.contains(message.getReceiverNode());
+    private boolean isMessageToNotNeighbor(Message message) {
+        synchronized (neighbors) {
+            for (Neighbor neighbor : neighbors) {
+                if (neighbor.equals(message.getReceiverNode())) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 

@@ -1,9 +1,7 @@
 package chatnode;
 
-import message.ConfirmationMessage;
-import message.Message;
-import message.ReplacementNodeShareMessage;
-import message.TextMessage;
+
+import message.*;
 import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -43,30 +41,30 @@ public class MessageReceiver extends Thread {
         this.lossPercentage = processInitLossPercentage(lossPercentage);
     }
 
-    public void setReplacementNode(@NotNull NetNode newReplacementNode){
+    public void setReplacementNode(@NotNull NetNode newReplacementNode) {
         synchronized (neighbors) {
             replacementNode = newReplacementNode;
             neighbors.forEach(this::sendReplacementNodeShareMessage);
         }
     }
 
-    private int processInitLossPercentage(int lossPercentageToCheck){
-        if (LossPercentageValidator.isValid(lossPercentageToCheck)){
-            logger.warn("Loss percentage is not valid, actual = "
-                    + lossPercentageToCheck + ", loss percentage now has default value = " + DEFAULT_LOSS_PERCENTAGE);
-            return DEFAULT_LOSS_PERCENTAGE;
+    private int processInitLossPercentage(int lossPercentageToCheck) {
+        if (LossPercentageValidator.isValid(lossPercentageToCheck)) {
+            return lossPercentageToCheck;
         }
-        return lossPercentageToCheck;
+        logger.warn("Loss percentage is not valid, actual = "
+                + lossPercentageToCheck + ", loss percentage now has default value = " + DEFAULT_LOSS_PERCENTAGE);
+        return DEFAULT_LOSS_PERCENTAGE;
     }
 
     @Override
     public void run() {
         Random randomLossPercentage = new Random();
-        while (!isInterrupted()){
+        while (!isInterrupted()) {
             DatagramPacket packet = new DatagramPacket(new byte[PACKET_SIZE], PACKET_SIZE);
             try {
                 socket.receive(packet);
-                if (lossPercentage > randomLossPercentage.nextInt(100)){
+                if (lossPercentage > randomLossPercentage.nextInt(100)) {
                     logger.debug("Packet lost");
                     continue;
                 }
@@ -84,26 +82,31 @@ public class MessageReceiver extends Thread {
                         break;
                     case CONFIRM:
                         ConfirmationMessage confirmationMessage = (ConfirmationMessage) message;
+                        if (confirmationMessage.getConfirmedMessage().getMessageType() == MessageType.CONNECT) {
+                            addNeighbor(packageSenderNode);
+                        }
                         addToConfirmedMessage(confirmationMessage.getConfirmedMessage());
                         break;
                     case CONNECT:
+                        if (message.getReceiverNode().equals(packageSenderNode)) {
+                            break;
+                        }
                         addNeighbor(packageSenderNode);
                         sendReplacementNodeShareMessage(packageSenderNode);
                         sendConfirmationMessage(packageSenderNode, message);
                         break;
                     case REPLACEMENT_NODE_SHARE:
                         ReplacementNodeShareMessage shareMessage = (ReplacementNodeShareMessage) message;
-                        updateNeighborReplacementNode(packageSenderNode, shareMessage.getReplacementNode());
+                        updateNeighborReplacementNode(packageSenderNode, shareMessage.getReplacementNode(), shareMessage.getReceiverNode());
                         sendConfirmationMessage(packageSenderNode, shareMessage);
                         break;
                 }
                 sleep(RECEIVE_INTERVAL_MS);
-            } catch (IOException e) {
-                logger.error("Cant receive message", e);
-                interrupt();
             } catch (InterruptedException e) {
-                logger.error("Sleep interrupted", e);
-                break;
+                logger.debug("Sleep interrupted", e);
+            } catch (IOException e) {
+                logger.debug("Cant receive packet from socket", e);
+                interrupt();
             }
         }
     }
@@ -122,20 +125,15 @@ public class MessageReceiver extends Thread {
         ));
     }
 
-    private void updateNeighborReplacementNode(NetNode neighborNode, NetNode replacementNode){
+    private void updateNeighborReplacementNode(NetNode neighborNode, NetNode replacementNode, NetNode receiverNode) {
         synchronized (neighbors) {
             for (Neighbor neighbor : neighbors) {
                 if (neighbor.equals(neighborNode)) {
-                    if (neighbor.equals(replacementNode)){
-                        neighbor.setReplacementNode(Neighbor.nullNeighbor);
-                        logger.info("Null neighbor set to " + neighbor);
-                    }
                     neighbor.setReplacementNode(replacementNode);
                     return;
                 }
             }
         }
-        logger.warn("No such neighbor, cant update replacement node");
     }
 
     private void addNeighbor(NetNode senderNode) {

@@ -39,12 +39,4 @@ public class NetNode implements Serializable {
     public int hashCode() {
         return Objects.hash(address, port);
     }
-
-    @Override
-    public String toString() {
-        return "NetNode{" +
-                "address=" + address +
-                ", port=" + port +
-                '}';
-    }
 }
