@@ -13,6 +13,7 @@ import utils.DurationUtils;
 import java.io.*;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 
@@ -87,7 +88,7 @@ public class ChatNode implements Closeable {
             setReplacementNode(chooseReplacementNode());
             startNeighborsCleaner();
             startSendingAliveMessages();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             startSendingTextMessages(bufferedReader);
         } catch (SocketException e) {
             logger.error("Chat node with name={" + initConfig.getName() + "} cant open socket", e);
