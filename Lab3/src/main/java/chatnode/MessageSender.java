@@ -46,7 +46,7 @@ public class MessageSender implements Runnable {
                 Thread.sleep(SEND_INTERVAL_MS);
             } catch (InterruptedException e) {
                 logger.debug("Sleep interrupt", e);
-                return;
+                Thread.currentThread().interrupt();
             }
         }
     }

@@ -61,12 +61,6 @@ public class ChatNode implements Closeable {
         }
     }
 
-    private void removeNeighbor(@NotNull Neighbor neighbor) {
-        synchronized (neighbors) {
-            neighbors.remove(Objects.requireNonNull(neighbor, "Neighbor cant be null"));
-        }
-    }
-
     public void start() {
         try {
             socket = new DatagramSocket(initConfig.getPort());

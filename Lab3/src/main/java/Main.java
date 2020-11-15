@@ -32,14 +32,12 @@ public class Main {
         String nodeName = args[NODE_NAME_ARG_INDEX];
         Optional<Integer> lossPercent = parseInteger(args[LOSS_PERCENTAGE_ARG_INDEX]);
         if (lossPercent.isEmpty()) {
-            logger.error("Loss percentage must be a integer, actual = {"
-                    + args[LOSS_PERCENTAGE_ARG_INDEX] + "}");
+            logger.error("Loss percentage must be a integer, actual = {}", args[LOSS_PERCENTAGE_ARG_INDEX]);
             return;
         }
         Optional<Integer> port = parseInteger(args[PORT_ARG_INDEX]);
         if (port.isEmpty()) {
-            logger.error("Node port must be a integer, actual = {"
-                    + args[PORT_ARG_INDEX] + "}");
+            logger.error("Node port must be a integer, actual = {}", args[PORT_ARG_INDEX]);
             return;
         }
 
@@ -48,14 +46,12 @@ public class Main {
             if (args.length == ARGUMENTS_NUMBER_WITH_NEIGHBOR) {
                 Optional<InetAddress> neighborAddress = parseInetAddress(args[NEIGHBOR_IP_ARG_INDEX]);
                 if (neighborAddress.isEmpty()) {
-                    logger.error("Cant parse neighbor ip address from: {"
-                            + args[NEIGHBOR_IP_ARG_INDEX] + "}");
+                    logger.error("Cant parse neighbor ip address from: {}", args[NEIGHBOR_IP_ARG_INDEX]);
                     return;
                 }
                 Optional<Integer> neighborPort = parseInteger(args[NEIGHBOR_PORT_ARG_INDEX]);
                 if (neighborPort.isEmpty()) {
-                    logger.error("Neighbor port must be a integer, actual = {"
-                            + args[NEIGHBOR_PORT_ARG_INDEX] + "}");
+                    logger.error("Neighbor port must be a integer, actual = {}", args[NEIGHBOR_PORT_ARG_INDEX]);
                     return;
                 }
 

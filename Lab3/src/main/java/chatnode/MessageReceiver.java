@@ -27,6 +27,7 @@ public class MessageReceiver implements Runnable {
     private final List<Neighbor> neighbors;
     private final DatagramSocket socket;
     private final int lossPercentage;
+    private final Random randomLossPercentage;
     private NetNode replacementNode = Neighbor.nullNeighbor;
 
     public MessageReceiver(@NotNull DatagramSocket socket,
@@ -39,6 +40,7 @@ public class MessageReceiver implements Runnable {
         this.confirmedMessages = Objects.requireNonNull(confirmedMessages, "Confirmed message list cant be null");
         this.neighbors = Objects.requireNonNull(neighbors, "Neighbors list cant be null");
         this.lossPercentage = processInitLossPercentage(lossPercentage);
+        this.randomLossPercentage = new Random();
     }
 
     public void setReplacementNode(@NotNull NetNode newReplacementNode) {
@@ -52,14 +54,15 @@ public class MessageReceiver implements Runnable {
         if (LossPercentageValidator.isValid(lossPercentageToCheck)) {
             return lossPercentageToCheck;
         }
-        logger.warn("Loss percentage is not valid, actual = "
-                + lossPercentageToCheck + ", loss percentage now has default value = " + DEFAULT_LOSS_PERCENTAGE);
+        logger.warn("Loss percentage is not valid, actual = {}, loss percentage now has default value = {}",
+                lossPercentageToCheck,
+                DEFAULT_LOSS_PERCENTAGE
+        );
         return DEFAULT_LOSS_PERCENTAGE;
     }
 
     @Override
     public void run() {
-        Random randomLossPercentage = new Random();
         while (!Thread.currentThread().isInterrupted()) {
             DatagramPacket packet = new DatagramPacket(new byte[PACKET_SIZE], PACKET_SIZE);
             try {
@@ -97,13 +100,17 @@ public class MessageReceiver implements Runnable {
                         break;
                     case REPLACEMENT_NODE_SHARE:
                         ReplacementNodeShareMessage shareMessage = (ReplacementNodeShareMessage) message;
-                        updateNeighborReplacementNode(packageSenderNode, shareMessage.getReplacementNode(), shareMessage.getReceiverNode());
+                        updateNeighborReplacementNode(packageSenderNode, shareMessage.getReplacementNode());
                         sendConfirmationMessage(packageSenderNode, shareMessage);
                         break;
+                    default:
+                        logger.error("Invalid message type = {}", message.getMessageType());
+                        throw new IllegalStateException("Cant work with this message type = " + message.getMessageType());
                 }
                 Thread.sleep(RECEIVE_INTERVAL_MS);
             } catch (InterruptedException e) {
                 logger.debug("Sleep interrupted", e);
+                Thread.currentThread().interrupt();
             } catch (IOException e) {
                 logger.debug("Cant receive packet from socket", e);
                 return;
@@ -125,7 +132,7 @@ public class MessageReceiver implements Runnable {
         ));
     }
 
-    private void updateNeighborReplacementNode(NetNode neighborNode, NetNode replacementNode, NetNode receiverNode) {
+    private void updateNeighborReplacementNode(NetNode neighborNode, NetNode replacementNode) {
         synchronized (neighbors) {
             for (Neighbor neighbor : neighbors) {
                 if (neighbor.equals(neighborNode)) {
@@ -176,7 +183,7 @@ public class MessageReceiver implements Runnable {
         System.out.println(message.getSenderName() + ": " + message.getText());
     }
 
-    private void updateAliveNeighborLastSeen(NetNode node){
+    private void updateAliveNeighborLastSeen(NetNode node) {
         synchronized (neighbors) {
             for (Neighbor neighbor : neighbors) {
                 if (node.equals(neighbor)) {
@@ -185,7 +192,7 @@ public class MessageReceiver implements Runnable {
                 }
             }
         }
-        logger.warn("From neighbor = {" + node.getAddress() + ": " + node.getPort() + "} was receive message, " +
-                    "but he was already removed from neighbors list");
+        logger.warn("From neighbor = {}:{} was receive message, " +
+                "but he was already removed from neighbors list", node.getAddress(), node.getPort());
     }
 }

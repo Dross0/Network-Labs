@@ -12,9 +12,11 @@ public final class LossPercentageValidator {
         }
     }
 
-    public static boolean isValid(int lossPercentage){
+    public static boolean isValid(int lossPercentage) {
         return lossPercentage >= MIN_VALUE && lossPercentage <= MAX_VALUE;
     }
 
-    public LossPercentageValidator() { throw new AssertionError("Cant create loss percentage validator instance");}
+    private LossPercentageValidator() {
+        throw new AssertionError("Cant create loss percentage validator instance");
+    }
 }
