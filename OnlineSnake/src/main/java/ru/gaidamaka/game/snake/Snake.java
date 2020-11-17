@@ -1,10 +1,13 @@
-package ru.gaidamaka.game;
+package ru.gaidamaka.game.snake;
 
 
 import org.jetbrains.annotations.NotNull;
+import ru.gaidamaka.game.Direction;
+import ru.gaidamaka.game.cell.Point;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 
 public class Snake implements Iterable<Point> {
@@ -40,17 +43,31 @@ public class Snake implements Iterable<Point> {
         this.currentDir = calculateCurrentDirection(head, tail);
     }
 
-    private void validateInitHeadAndTail(Point head, Point tail){
+    public Snake(@NotNull List<Point> points,
+                 @NotNull Direction currentDir,
+                 int xCoordinateLimit,
+                 int yCoordinateLimit) {
+        this.currentDir = Objects.requireNonNull(currentDir, "Direction cant be null");
+        snakePoints = new ArrayList<>(points.size());
+        snakePoints.addAll(points);
+        head = snakePoints.get(0);
+        tail = snakePoints.get(snakePoints.size() - 1);
+        this.xCoordinateLimit = xCoordinateLimit;
+        this.yCoordinateLimit = yCoordinateLimit;
+        speed = 1;
+    }
+
+    private void validateInitHeadAndTail(Point head, Point tail) {
         int xDistance = Math.abs(head.getX() - tail.getX());
         int yDistance = Math.abs(head.getY() - tail.getY());
         if (xDistance == yDistance
                 || xDistance > 1
-                || yDistance > 1){
+                || yDistance > 1) {
             throw new IllegalArgumentException("Head and tail are not connected");
         }
     }
 
-    private Direction calculateCurrentDirection(Point head, Point tail){
+    private Direction calculateCurrentDirection(Point head, Point tail) {
         validateInitHeadAndTail(head, tail);
         if (head.getX() - tail.getX() < 0){
             return Direction.LEFT;
@@ -151,8 +168,29 @@ public class Snake implements Iterable<Point> {
         return false;
     }
 
-    public boolean isSnake(@NotNull Point p){
+    Direction getCurrentDirection() {
+        return currentDir;
+    }
+
+    List<Point> getSnakePoints() {
+        return snakePoints;
+    }
+
+    public boolean isSnake(@NotNull Point p) {
         return p.equals(head) || p.equals(tail) || isSnakeBody(p);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Snake points = (Snake) o;
+        return snakePoints.equals(points.snakePoints);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(snakePoints);
     }
 
     /**

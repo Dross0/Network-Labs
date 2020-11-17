@@ -1,4 +1,4 @@
-package ru.gaidamaka.game;
+package ru.gaidamaka.game.player;
 
 import org.jetbrains.annotations.NotNull;
 

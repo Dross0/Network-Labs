@@ -1,4 +1,4 @@
-package ru.gaidamaka.game;
+package ru.gaidamaka.game.cell;
 
 public class Point {
     private final int x;

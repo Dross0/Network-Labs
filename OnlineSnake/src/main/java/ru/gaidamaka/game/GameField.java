@@ -1,6 +1,9 @@
 package ru.gaidamaka.game;
 
 import org.jetbrains.annotations.NotNull;
+import ru.gaidamaka.game.cell.Cell;
+import ru.gaidamaka.game.cell.CellType;
+import ru.gaidamaka.game.cell.Point;
 
 import java.util.*;
 
@@ -103,7 +106,7 @@ public class GameField {
                         squareCenter.getX() + xCenterOffset,
                         squareCenter.getY() + yCenterOffset
                 );
-                if (cell.getType() == CellType.SNAKE_BODY){
+                if (cell.getType() == CellType.SNAKE) {
                     return false;
                 }
             }

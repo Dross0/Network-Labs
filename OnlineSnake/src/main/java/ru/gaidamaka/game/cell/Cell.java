@@ -1,27 +1,34 @@
-package ru.gaidamaka.game;
+package ru.gaidamaka.game.cell;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
 public class Cell {
+    @NotNull
     private final Point point;
+
+    @NotNull
     private CellType type;
 
 
-    public Cell(int x, int y, @NotNull CellType type){
+    public Cell(int x, int y, @NotNull CellType type) {
         this.point = new Point(x, y);
         this.type = Objects.requireNonNull(type, "Cell type cant be null");
     }
 
-    public Cell(int x, int y){
+    public Cell(int x, int y) {
         this(x, y, CellType.EMPTY);
     }
 
-    public Cell(@NotNull Cell cell){
-        this(cell.getX(), cell.getY(), cell.getType());
+    public Cell(@NotNull Cell cell) {
+        this(cell.point, cell.getType());
     }
 
+    public Cell(@NotNull Point point, @NotNull CellType type) {
+        this.point = Objects.requireNonNull(point, "Point cant be null");
+        this.type = Objects.requireNonNull(type, "Type cant be null");
+    }
 
     @NotNull
     public CellType getType() {
@@ -36,6 +43,7 @@ public class Cell {
         return point.getY();
     }
 
+    @NotNull
     public Point asPoint(){
         return point;
     }
