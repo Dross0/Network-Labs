@@ -1,7 +1,10 @@
 package chatnode;
 
 
-import message.*;
+import message.ConfirmationMessage;
+import message.Message;
+import message.ReplacementNodeShareMessage;
+import message.TextMessage;
 import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -81,22 +84,12 @@ public class MessageReceiver implements Runnable {
                         resendTextMessageToNeighbors(packageSenderNode, textMessage);
                         break;
                     case ALIVE:
+                        checkAndAddNeighbor(message, packageSenderNode);
                         updateAliveNeighborLastSeen(packageSenderNode);
                         break;
                     case CONFIRM:
                         ConfirmationMessage confirmationMessage = (ConfirmationMessage) message;
-                        if (confirmationMessage.getConfirmedMessage().getMessageType() == MessageType.CONNECT) {
-                            addNeighbor(packageSenderNode);
-                        }
                         addToConfirmedMessage(confirmationMessage.getConfirmedMessage());
-                        break;
-                    case CONNECT:
-                        if (message.getReceiverNode().equals(packageSenderNode)) {
-                            break;
-                        }
-                        addNeighbor(packageSenderNode);
-                        sendReplacementNodeShareMessage(packageSenderNode);
-                        sendConfirmationMessage(packageSenderNode, message);
                         break;
                     case REPLACEMENT_NODE_SHARE:
                         ReplacementNodeShareMessage shareMessage = (ReplacementNodeShareMessage) message;
@@ -118,14 +111,28 @@ public class MessageReceiver implements Runnable {
         }
     }
 
-    private void sendReplacementNodeShareMessage(NetNode receiver){
+    private boolean checkAndAddNeighbor(Message message, NetNode packageSenderNode) {
+        synchronized (neighbors) {
+            if (!neighbors.contains(packageSenderNode)) {
+                if (message.getReceiverNode().equals(packageSenderNode)) {
+                    return true;
+                }
+                addNeighbor(packageSenderNode);
+                sendReplacementNodeShareMessage(packageSenderNode);
+                sendConfirmationMessage(packageSenderNode, message);
+            }
+        }
+        return false;
+    }
+
+    private void sendReplacementNodeShareMessage(NetNode receiver) {
         sender.sendMessage(new ReplacementNodeShareMessage(
                 receiver,
                 replacementNode
         ));
     }
 
-    private void sendConfirmationMessage(NetNode receiverNode, Message message){
+    private void sendConfirmationMessage(NetNode receiverNode, Message message) {
         sender.sendMessage(new ConfirmationMessage(
                 receiverNode,
                 message
@@ -144,12 +151,14 @@ public class MessageReceiver implements Runnable {
     }
 
     private void addNeighbor(NetNode senderNode) {
-        Neighbor neighbor = new Neighbor(senderNode);
-        if (neighbors.contains(neighbor)){
-            logger.warn("This neighbor already added");
-            return;
+        synchronized (neighbors) {
+            Neighbor neighbor = new Neighbor(senderNode);
+            if (neighbors.contains(neighbor)) {
+                logger.warn("This neighbor already added");
+                return;
+            }
+            neighbors.add(neighbor);
         }
-        neighbors.add(neighbor);
     }
 
     private void addToConfirmedMessage(Message confirmedMessage){

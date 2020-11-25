@@ -2,7 +2,6 @@ package chatnode;
 
 
 import message.AliveMessage;
-import message.ConnectMessage;
 import message.Message;
 import message.TextMessage;
 import org.jetbrains.annotations.NotNull;
@@ -78,7 +77,6 @@ public class ChatNode implements Closeable {
             messageReceiverThread.setName("Message receiver");
             messageSenderThread.start();
             messageReceiverThread.start();
-            connectToNeighbors();
             setReplacementNode(chooseReplacementNode());
             startNeighborsCleaner();
             startSendingAliveMessages();
@@ -86,12 +84,6 @@ public class ChatNode implements Closeable {
             startSendingTextMessages(bufferedReader);
         } catch (SocketException e) {
             logger.error("Chat node with name={" + initConfig.getName() + "} cant open socket", e);
-        }
-    }
-
-    private void connectToNeighbors() {
-        synchronized (neighbors) {
-            neighbors.forEach(neighbor -> messageSender.sendMessage(new ConnectMessage(neighbor)));
         }
     }
 
@@ -145,18 +137,16 @@ public class ChatNode implements Closeable {
             @Override
             public void run() {
                 synchronized (neighbors) {
+                    List<Neighbor> newNeighbors = new ArrayList<>();
                     neighbors.forEach(neighbor -> {
                         if (neighborIsDead(neighbor)) {
-                            neighbor.getReplacementNode().ifPresent(neighborReplacementNode -> {
-                                        if (!neighbor.equals(neighborReplacementNode)) {
-                                            messageSender.sendMessage(new ConnectMessage(neighborReplacementNode));
-                                        }
-                                    }
+                            neighbor.getReplacementNode().ifPresent(neighborReplacementNode ->
+                                    newNeighbors.add(new Neighbor(neighborReplacementNode))
                             );
                         }
                     });
                     neighbors.removeIf(ChatNode.this::neighborIsDead);
-
+                    neighbors.addAll(newNeighbors);
                 }
                 if (replacementNode.isNull() || neighborIsDead(replacementNode)){
                     setReplacementNode(chooseReplacementNode());

@@ -3,7 +3,6 @@ package message;
 public enum  MessageType {
     TEXT(true),
     ALIVE(false),
-    CONNECT(true),
     CONFIRM(false),
     REPLACEMENT_NODE_SHARE(true);
 
