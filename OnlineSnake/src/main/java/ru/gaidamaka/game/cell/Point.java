@@ -30,10 +30,18 @@ public class Point {
     }
 
     @Override
-    public int hashCode(){
+    public int hashCode() {
         int hash = 7;
         hash = 71 * hash + x;
         hash = 71 * hash + y;
         return hash;
+    }
+
+    @Override
+    public String toString() {
+        return "Point{" +
+                "x=" + x +
+                ", y=" + y +
+                '}';
     }
 }

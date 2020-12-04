@@ -6,7 +6,6 @@ import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.Player;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,7 +22,7 @@ public class SnakeInfo {
 
     public SnakeInfo(@NotNull Snake snake) {
         player = null;
-        snakePoints = Collections.unmodifiableList(snake.getSnakePoints());
+        snakePoints = List.copyOf(snake.getSnakePoints());
         direction = snake.getCurrentDirection();
     }
 
@@ -31,10 +30,12 @@ public class SnakeInfo {
         this.player = Objects.requireNonNull(player, "Player cant be null");
     }
 
-    public @NotNull List<Point> getSnakePoints() {
+    @NotNull
+    public List<Point> getSnakePoints() {
         return snakePoints;
     }
 
+    @NotNull
     public Optional<Player> getPlayer() {
         return Optional.ofNullable(player);
     }
@@ -47,7 +48,18 @@ public class SnakeInfo {
         return !isAliveSnake();
     }
 
-    public @NotNull Direction getDirection() {
+    @NotNull
+    public Point getSnakeHead() {
+        return snakePoints.get(0);
+    }
+
+    @NotNull
+    public Point getSnakeTail() {
+        return snakePoints.get(snakePoints.size() - 1);
+    }
+
+    @NotNull
+    public Direction getDirection() {
         return direction;
     }
 }

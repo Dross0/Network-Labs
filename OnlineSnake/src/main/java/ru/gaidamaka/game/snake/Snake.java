@@ -4,6 +4,7 @@ package ru.gaidamaka.game.snake;
 import org.jetbrains.annotations.NotNull;
 import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.cell.Point;
+import ru.gaidamaka.game.cell.PointUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -11,7 +12,6 @@ import java.util.List;
 import java.util.Objects;
 
 public class Snake implements Iterable<Point> {
-    private final int speed;
     private final int xCoordinateLimit;
     private final int yCoordinateLimit;
 
@@ -25,21 +25,21 @@ public class Snake implements Iterable<Point> {
     private Direction currentDir;
 
     @NotNull
-    private final ArrayList<Point> snakePoints;
+    private final List<Point> snakePoints;
 
     public Snake(@NotNull Point head,
                  @NotNull Point tail,
                  int xCoordinateLimit,
                  int yCoordinateLimit) {
-        speed = 1;
+        this.xCoordinateLimit = xCoordinateLimit;
+        this.yCoordinateLimit = yCoordinateLimit;
         this.head = Objects.requireNonNull(head, "Head point cant be null");
         this.tail = Objects.requireNonNull(tail, "Tail point cant be null");
         validateInitHeadAndTail(head, tail);
         snakePoints = new ArrayList<>();
         snakePoints.add(head);
         snakePoints.add(tail);
-        this.xCoordinateLimit = xCoordinateLimit;
-        this.yCoordinateLimit = yCoordinateLimit;
+
         this.currentDir = calculateCurrentDirection(head, tail);
     }
 
@@ -47,35 +47,30 @@ public class Snake implements Iterable<Point> {
                  @NotNull Direction currentDir,
                  int xCoordinateLimit,
                  int yCoordinateLimit) {
-        this.currentDir = Objects.requireNonNull(currentDir, "Direction cant be null");
-        snakePoints = new ArrayList<>(points.size());
-        snakePoints.addAll(points);
-        head = snakePoints.get(0);
-        tail = snakePoints.get(snakePoints.size() - 1);
         this.xCoordinateLimit = xCoordinateLimit;
         this.yCoordinateLimit = yCoordinateLimit;
-        speed = 1;
+        this.currentDir = Objects.requireNonNull(currentDir, "Direction cant be null");
+        snakePoints = List.copyOf(points);
+        head = snakePoints.get(0);
+        tail = snakePoints.get(snakePoints.size() - 1);
+
     }
 
     private void validateInitHeadAndTail(Point head, Point tail) {
-        int xDistance = Math.abs(head.getX() - tail.getX());
-        int yDistance = Math.abs(head.getY() - tail.getY());
-        if (xDistance == yDistance
-                || xDistance > 1
-                || yDistance > 1) {
+        if (!PointUtils.arePointsStraightConnected(head, tail, xCoordinateLimit, yCoordinateLimit)) {
             throw new IllegalArgumentException("Head and tail are not connected");
         }
     }
 
     private Direction calculateCurrentDirection(Point head, Point tail) {
         validateInitHeadAndTail(head, tail);
-        if (head.getX() - tail.getX() < 0){
+        if (PointUtils.getPointToRight(head, xCoordinateLimit).equals(tail)) {
             return Direction.LEFT;
-        } else if (head.getX() - tail.getX() > 0){
+        } else if (PointUtils.getPointToLeft(head, xCoordinateLimit).equals(tail)) {
             return Direction.RIGHT;
-        } else if (head.getY() - tail.getY() < 0){
+        } else if (PointUtils.getPointBelow(head, yCoordinateLimit).equals(tail)) {
             return Direction.UP;
-        } else if (head.getY() - tail.getX() > 0){
+        } else if (PointUtils.getPointAbove(head, yCoordinateLimit).equals(tail)) {
             return Direction.DOWN;
         }
         throw new IllegalStateException("Cant calculate current direction");
@@ -94,37 +89,15 @@ public class Snake implements Iterable<Point> {
     private Point getNewHead(@NotNull Direction dir) {
         switch (dir) {
             case DOWN:
-                return new Point(
-                        head.getX(),
-                        countNewHeadCoordinate(head.getY() + speed, yCoordinateLimit)
-                );
+                return PointUtils.getPointBelow(head, yCoordinateLimit);
             case UP:
-                return new Point(
-                        head.getX(),
-                        countNewHeadCoordinate(head.getY() - speed, yCoordinateLimit)
-                );
+                return PointUtils.getPointAbove(head, yCoordinateLimit);
             case LEFT:
-                return new Point(
-                        countNewHeadCoordinate(head.getX() - speed, xCoordinateLimit),
-                        head.getY()
-                );
+                return PointUtils.getPointToLeft(head, xCoordinateLimit);
             case RIGHT:
-                return new Point(
-                        countNewHeadCoordinate(head.getX() + speed, xCoordinateLimit),
-                        head.getY()
-                );
+                return PointUtils.getPointToRight(head, xCoordinateLimit);
             default:
                 throw new IllegalStateException("Unknown direction = " + dir);
-        }
-    }
-
-    private int countNewHeadCoordinate(int newCoordinate, int coordinateLimit) {
-        if (newCoordinate > coordinateLimit) {
-            return newCoordinate % coordinateLimit;
-        } else if (newCoordinate < 0) {
-            return coordinateLimit - 1;
-        } else {
-            return newCoordinate;
         }
     }
 
@@ -168,10 +141,12 @@ public class Snake implements Iterable<Point> {
         return false;
     }
 
+    @NotNull
     Direction getCurrentDirection() {
         return currentDir;
     }
 
+    @NotNull
     List<Point> getSnakePoints() {
         return snakePoints;
     }

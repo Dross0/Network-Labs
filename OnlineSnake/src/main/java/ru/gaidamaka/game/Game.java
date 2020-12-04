@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Game implements Observable {
+public class Game implements GameObservable {
     private static final Logger logger = LoggerFactory.getLogger(Game.class);
 
     private static final int SIZE_OF_EMPTY_SQUARE_FOR_SNAKE = 5;
@@ -30,14 +30,14 @@ public class Game implements Observable {
     private final GameConfig config;
     private final List<Cell> fruits;
     private final GameField field;
-    private final ArrayList<Observer> observers;
+    private final ArrayList<GameObserver> gameObservers;
     private final Random random = new Random();
     private int stateID;
 
     public Game(@NotNull GameConfig config) {
         this.config = Objects.requireNonNull(config, "Config cant be null");
         field = new GameField(config.getFieldWidth(), config.getFieldHeight());
-        observers = new ArrayList<>();
+        gameObservers = new ArrayList<>();
         stateID = 0;
         fruits = new ArrayList<>(config.getFoodStaticNumber());
         generateFruits();
@@ -47,7 +47,7 @@ public class Game implements Observable {
         config = state.getGameConfig();
         field = new GameField(config.getFieldWidth(), config.getFieldHeight());
         stateID = state.getStateID();
-        observers = new ArrayList<>();
+        gameObservers = new ArrayList<>();
         List<SnakeInfo> snakeInfos = state.getSnakeInfos();
         snakeInfos.forEach(snakeInfo -> {
             Snake snake = createSnakeFromSnakeInfo(snakeInfo);
@@ -73,7 +73,6 @@ public class Game implements Observable {
             field.set(fruit, CellType.FRUIT);
             fruits.add(new Cell(fruit, CellType.FRUIT));
         });
-
     }
 
     private void markSnakeOnField(Snake snake) {
@@ -93,7 +92,7 @@ public class Game implements Observable {
     }
 
 
-    public void registrationNewPlayer(@NotNull String playerName) {
+    public Player registrationNewPlayer(@NotNull String playerName) {
         Player player = Player.create(playerName);
         List<Cell> headAndTailOfNewSnake = getNewSnakeHeadAndTail();
         if (headAndTailOfNewSnake.isEmpty()) {
@@ -108,10 +107,11 @@ public class Game implements Observable {
         headAndTailOfNewSnake.forEach(cell -> field.set(cell.getY(), cell.getX(), CellType.SNAKE));
         playersWithSnakes.put(player, playerSnake);
         playersScores.put(player, 0);
+        return player;
     }
 
     private List<Cell> getNewSnakeHeadAndTail() {
-        Optional<Cell> centerOfEmptySquareOnField = field.findCenterOfSquareWithOutSnakeSquare(SIZE_OF_EMPTY_SQUARE_FOR_SNAKE);
+        Optional<Cell> centerOfEmptySquareOnField = field.findCenterOfSquareWithOutSnake(SIZE_OF_EMPTY_SQUARE_FOR_SNAKE);
         if (centerOfEmptySquareOnField.isEmpty()) {
             return Collections.emptyList();
         }
@@ -137,7 +137,7 @@ public class Game implements Observable {
     public void removePlayer(@NotNull Player player) {
         Objects.requireNonNull(player, "Player cant be null");
         if (!playersWithSnakes.containsKey(player)) {
-            throw new IllegalArgumentException(UNKNOWN_PLAYER_ERROR_MESSAGE);
+            return;
         }
         zombieSnakes.add(playersWithSnakes.get(player));
         markPlayerInactive(player);
@@ -186,37 +186,48 @@ public class Game implements Observable {
     }
 
     public void makeAllPlayersMove(@NotNull Map<Player, Direction> playersMoves) {
-        int fruitsBeforeMoves = fruits.size();
         playersWithSnakes
                 .keySet()
                 .forEach(
                         player -> makeMove(player, playersMoves.getOrDefault(player, null))
                 );
         zombieSnakesMove();
-        if (fruitsBeforeMoves != fruits.size()) {
-            generateFruits();
-        }
+        generateFruits();
         playersForRemove
                 .keySet()
                 .forEach(player -> {
                     makeFruitsFromSnakeWithProbability(playersWithSnakes.get(player));
                     markPlayerInactive(player);
                 });
-
+        playersForRemove.clear();
         notifyObservers();
     }
 
     private void zombieSnakesMove() {
-        zombieSnakes.forEach(Snake::makeMove);
+        zombieSnakes.forEach(this::zombieMove);
         zombieSnakes.stream()
                 .filter(this::isSnakeCrashed)
                 .forEach(this::makeFruitsFromSnakeWithProbability);
         zombieSnakes.removeIf(this::isSnakeCrashed);
     }
 
+    private void zombieMove(Snake snake) {
+        snake.makeMove();
+        if (isSnakeAteFruit(snake)) {
+            removeFruit(snake.getHead());
+        } else {
+            field.set(snake.getTail(), CellType.EMPTY);
+            snake.removeTail();
+        }
+        field.set(snake.getHead(), CellType.SNAKE);
+    }
+
     private void generateFruits() {
         int aliveSnakesCount = playersWithSnakes.size();
         int requiredFruitsNumber = config.getFoodStaticNumber() + config.getFoodPerPlayer() * aliveSnakesCount;
+        if (fruits.size() == requiredFruitsNumber) {
+            return;
+        }
         if (field.getEmptyCellsNumber() < requiredFruitsNumber) {
             logger.debug("Cant generate required number of fruits={}, empty cells number={}",
                     requiredFruitsNumber,
@@ -233,11 +244,12 @@ public class Game implements Observable {
     }
 
     private void incrementScore(Player player) {
-        if (playersScores.containsKey(player)) {
-            int prevScore = playersScores.get(player);
-            playersScores.put(player, prevScore + 1);
+        if (!playersScores.containsKey(player)) {
+            throw new IllegalArgumentException(UNKNOWN_PLAYER_ERROR_MESSAGE);
         }
-        throw new IllegalArgumentException(UNKNOWN_PLAYER_ERROR_MESSAGE);
+        int prevScore = playersScores.get(player);
+        playersScores.put(player, prevScore + 1);
+
     }
 
     private boolean isSnakeAteFruit(Snake snake) {
@@ -255,6 +267,7 @@ public class Game implements Observable {
             }
             if (random.nextDouble() < config.getProbabilityOfDeadSnakeCellsToFood()) {
                 field.set(p, CellType.FRUIT);
+                fruits.add(field.get(p.getY(), p.getX()));
             } else {
                 field.set(p, CellType.EMPTY);
             }
@@ -262,34 +275,49 @@ public class Game implements Observable {
     }
 
     private boolean isSnakeCrashed(Snake snake) {
+        if (isSnakeCrashedToZombie(snake)) {
+            return true;
+        }
         for (Map.Entry<Player, Snake> playerWithSnake : playersWithSnakes.entrySet()) {
             Snake otherSnake = playerWithSnake.getValue();
-            if (otherSnake.isSnake(snake.getHead())) {
-                if (!otherSnake.equals(snake)) {
-                    incrementScore(playerWithSnake.getKey());
-                }
+            if (checkCrashIntoYourself(snake)) {
+                return true;
+            }
+            if (otherSnake != snake && otherSnake.isSnake(snake.getHead())) {
+                incrementScore(playerWithSnake.getKey());
                 return true;
             }
         }
         return false;
     }
 
-    @Override
-    public void addObserver(Observer observer) {
-        observers.add(observer);
+    private boolean isSnakeCrashedToZombie(Snake snake) {
+        return zombieSnakes.stream()
+                .anyMatch(zombieSnake ->
+                        zombieSnake != snake && zombieSnake.isSnake(snake.getHead())
+                );
+    }
+
+    private boolean checkCrashIntoYourself(Snake snake) {
+        return snake.isSnakeBody(snake.getHead()) || snake.getTail().equals(snake.getHead());
     }
 
     @Override
-    public void removeObserver(Observer observer) {
-        observers.remove(observer);
+    public void addObserver(GameObserver gameObserver) {
+        gameObservers.add(gameObserver);
+    }
+
+    @Override
+    public void removeObserver(GameObserver gameObserver) {
+        gameObservers.remove(gameObserver);
     }
 
 
     @Override
     public void notifyObservers() {
         GameState gameState = generateGameState();
-        for (Observer observer : observers) {
-            observer.update(gameState);
+        for (GameObserver gameObserver : gameObservers) {
+            gameObserver.update(gameState);
         }
     }
 
@@ -313,8 +341,12 @@ public class Game implements Observable {
 
     @NotNull
     private List<SnakeInfo> generateSnakeInfosList() {
-        List<SnakeInfo> snakeInfos = new ArrayList<>(playersWithSnakes.size());
-        playersWithSnakes.values().forEach(snake -> snakeInfos.add(new SnakeInfo(snake)));
+        List<SnakeInfo> snakeInfos = new ArrayList<>(playersWithSnakes.size() + zombieSnakes.size());
+        playersWithSnakes.forEach((player, snake) -> {
+            SnakeInfo snakeInfo = new SnakeInfo(snake);
+            snakeInfo.setPlayer(player);
+            snakeInfos.add(snakeInfo);
+        });
         zombieSnakes.forEach(snake -> snakeInfos.add(new SnakeInfo(snake)));
         return snakeInfos;
     }
@@ -324,14 +356,5 @@ public class Game implements Observable {
         List<PlayerWithScore> playerWithScores = new ArrayList<>(playersScores.size());
         playersScores.forEach((player, score) -> playerWithScores.add(new PlayerWithScore(player, score)));
         return playerWithScores;
-    }
-
-
-    public int getFieldWidth() {
-        return field.getWidth();
-    }
-
-    public int getFieldHeight() {
-        return field.getHeight();
     }
 }
