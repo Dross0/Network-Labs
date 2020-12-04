@@ -48,7 +48,7 @@ public class MessageStorage {
     }
 
     private void removeAckReceivedMessages() {
-        receivedMessages.keySet().removeIf(SnakesProto.GameMessage::hasAck);
+        receivedMessages.keySet().removeIf(SnakesProto.GameMessage::hasAck);//TODO check correct
     }
 
     private boolean isConfirmedMessage(SnakesProto.GameMessage message) {

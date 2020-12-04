@@ -6,8 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.SplitPane;
 import javafx.stage.Stage;
-import ru.gaidamaka.config.ProtoGameConfigAdapter;
-import ru.gaidamaka.game.Game;
+import ru.gaidamaka.config.ConfigReader;
 import ru.gaidamaka.gui.GameWindowController;
 import ru.gaidamaka.gui.MoveHandler;
 
@@ -15,8 +14,8 @@ import java.io.IOException;
 
 
 public class Main extends Application {
-    private Stage primaryStage;
-    private Scene menuScene;
+    private static final String CONFIG_PATH = "config.properties";
+    private static final String GAME_VIEW_FXML_PATH = "GameView.fxml";
 
     public static void main(String[] args) {
         launch(args);
@@ -24,31 +23,17 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        SnakesProto.GameConfig config = SnakesProto.GameConfig.newBuilder()
-                .setDeadFoodProb(1.0f)
-                .setHeight(10)
-                .setWidth(10)
-                .setFoodStatic(3)
-                .setFoodPerPlayer(1)
-                .build();
-        this.primaryStage = stage;
+        SnakesProto.GameConfig config = ConfigReader.readProtoConfig(CONFIG_PATH);
         try {
             FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(Main.class.getClassLoader().getResource("GameView.fxml"));
+            loader.setLocation(Main.class.getClassLoader().getResource(GAME_VIEW_FXML_PATH));
             SplitPane root = loader.load();
             GameWindowController controller = loader.getController();
-            ProtoGameConfigAdapter configAdapter = new ProtoGameConfigAdapter(config);
-            Game game = new Game(configAdapter);
-            controller.setGameConfig(configAdapter);
-            MoveHandler moveHandler = new MoveHandler(250);
-            moveHandler.setGame(game);
+            MoveHandler moveHandler = new MoveHandler(config, 250);
             moveHandler.setView(controller);
             controller.setStage(stage);
             controller.setGamePresenter(moveHandler);
-            controller.builtField();
-            moveHandler.start();
-            this.menuScene = new Scene(root);
-            stage.setScene(this.menuScene);
+            stage.setScene(new Scene(root));
             stage.sizeToScene();
             stage.show();
         } catch (IOException ex) {

@@ -2,6 +2,9 @@ package ru.gaidamaka.gui;
 
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
+import ru.gaidamaka.SnakesProto;
+import ru.gaidamaka.config.GameConfig;
+import ru.gaidamaka.config.ProtoGameConfigAdapter;
 import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.Game;
 import ru.gaidamaka.game.GameObserver;
@@ -30,12 +33,18 @@ public class MoveHandler implements GamePresenter, GameObserver {
 
     private GameState prevGameState;
     private View view;
-    private Player p;
+    private Player zombie;
+
+    @NotNull
+    private final SnakesProto.GameConfig playerConfig;
 
     @NotNull
     private final PlayerColorMapper colorMapper;
+    private Thread zombieSimThread;
+    private Thread playerMoveThread;
 
-    public MoveHandler(long movePeriodMs) {
+    public MoveHandler(@NotNull SnakesProto.GameConfig playerConfig, long movePeriodMs) {
+        this.playerConfig = Objects.requireNonNull(playerConfig, "Config cant be null");
         this.movePeriodMs = movePeriodMs;
         this.colorMapper = new PlayerColorMapper();
     }
@@ -44,26 +53,21 @@ public class MoveHandler implements GamePresenter, GameObserver {
         this.view = view;
     }
 
-    public void setGame(@NotNull Game game) {
-        this.game = Objects.requireNonNull(game, "Game cant be null");
-        this.game.addObserver(this);
+    private void testStart() {
+        player = game.registrationNewPlayer("Dross");
+        this.zombie = game.registrationNewPlayer("JJ");
+        if (zombieSimThread != null && playerMoveThread != null) {
+            zombieSimThread.interrupt();
+            playerMoveThread.interrupt();
+        }
+        this.zombieSimThread = new Thread(getZombieSimRunnable());
+        this.playerMoveThread = new Thread(getMoveRunnable());
+        zombieSimThread.start();
+        playerMoveThread.start();
     }
 
-    public void start() {
-        player = game.registrationNewPlayer("Dross");
-        this.p = game.registrationNewPlayer("JJ");
-        Player tmp = game.registrationNewPlayer("Bob");
-        new Thread(() -> {
-            try {
-                Thread.sleep(5000);
-                game.removePlayer(p);
-                Thread.sleep(3000);
-                game.removePlayer(tmp);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
-        new Thread(() -> {
+    private Runnable getMoveRunnable() {
+        return () -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(movePeriodMs);
@@ -72,7 +76,18 @@ public class MoveHandler implements GamePresenter, GameObserver {
                 }
                 game.makeAllPlayersMove(moves);
             }
-        }).start();
+        };
+    }
+
+    private Runnable getZombieSimRunnable() {
+        return () -> {
+            try {
+                Thread.sleep(5000);
+                game.removePlayer(zombie);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        };
     }
 
     @Override
@@ -80,7 +95,26 @@ public class MoveHandler implements GamePresenter, GameObserver {
         Objects.requireNonNull(userEvent, "User event cant be null");
         if (userEvent.getType() == UserEventType.MOVE) {
             handleMoveEvent((MoveEvent) userEvent);
+        } else if (userEvent.getType() == UserEventType.NEW_GAME) {
+            handleNewGameEvent();
+        } else if (userEvent.getType() == UserEventType.EXIT) {
+            handleExitEvent();
         }
+    }
+
+    private void handleExitEvent() {
+        if (zombieSimThread != null && playerMoveThread != null) {
+            zombieSimThread.interrupt(); //test
+            playerMoveThread.interrupt(); //test
+        }
+    }
+
+    private void handleNewGameEvent() {
+        GameConfig configAdapter = new ProtoGameConfigAdapter(playerConfig);
+        game = new Game(configAdapter);
+        game.addObserver(this);
+        view.setConfig(configAdapter);
+        testStart();
     }
 
     @Override
@@ -89,7 +123,7 @@ public class MoveHandler implements GamePresenter, GameObserver {
         if (arrowKey) {
             moves.put(player, event.getDirection());
         } else {
-            moves.put(p, event.getDirection());
+            moves.put(zombie, event.getDirection());
         }
     }
 
@@ -120,9 +154,9 @@ public class MoveHandler implements GamePresenter, GameObserver {
                 .map(PlayerWithScore::getPlayer)
                 .collect(Collectors.toList());
         removeInactivePlayersFromColorMap(players);
-        players.forEach(player -> {
-            if (!colorMapper.isPlayerRegistered(player)) {
-                colorMapper.addPlayer(player);
+        players.forEach(activePlayer -> {
+            if (!colorMapper.isPlayerRegistered(activePlayer)) {
+                colorMapper.addPlayer(activePlayer);
             }
         });
     }
@@ -154,7 +188,7 @@ public class MoveHandler implements GamePresenter, GameObserver {
     }
 
     private void clearPrevGameState(GameState newGameState) {
-        if (prevGameState.getActivePlayers().size() != newGameState.getActivePlayers().size()) {
+        if (prevGameState.getSnakeInfos().size() != newGameState.getSnakeInfos().size()) {
             clearDeadSnakes(newGameState);
         }
         clearSnakesTails(newGameState);
@@ -183,7 +217,8 @@ public class MoveHandler implements GamePresenter, GameObserver {
         Point snakeHead = snake.getSnakeHead();
         return snakeInfoList.stream()
                 .flatMap(snakeInfo ->
-                        snakeInfo.getSnakePoints().stream())
+                        snakeInfo.getSnakePoints().stream()
+                )
                 .noneMatch(point ->
                         point.equals(snakeHead)
                 );

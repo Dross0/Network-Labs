@@ -66,9 +66,6 @@ public class GameWindowController implements View {
 
     private GamePresenter gamePresenter;
 
-    public void setGameConfig(@NotNull GameConfig gameConfig) {
-        this.gameConfig = Objects.requireNonNull(gameConfig, "Config cant be null");
-    }
 
     public void setGamePresenter(@NotNull GamePresenter presenter) {
         this.gamePresenter = Objects.requireNonNull(presenter, "Presenter cant be null");
@@ -77,8 +74,9 @@ public class GameWindowController implements View {
     public void setStage(@NotNull Stage stage) {
         this.stage = Objects.requireNonNull(stage, "Stage cant be null");
         this.stage.addEventHandler(KeyEvent.KEY_RELEASED, getMovementEventHandler());
-        setActionOnButtons();
+        this.stage.setOnCloseRequest(event -> close());
         initPlayersInfoTable();
+        setActionOnButtons();
     }
 
     private void setActionOnButtons() {
@@ -125,7 +123,7 @@ public class GameWindowController implements View {
         }
     }
 
-    public void builtField() {
+    private void builtField() {
         if (gameConfig == null) {
             throw new IllegalStateException("Cant create field without config");
         }
@@ -177,6 +175,12 @@ public class GameWindowController implements View {
     @Override
     public void showUserListInfo(@NotNull List<PlayerWithScore> playerWithScoreList) {
         playersObservableList.setAll(playerWithScoreList);
+    }
+
+    @Override
+    public void setConfig(@NotNull GameConfig gameConfig) {
+        this.gameConfig = Objects.requireNonNull(gameConfig, "Config cant be null");
+        builtField();
     }
 
     private void initPlayersInfoTable() {

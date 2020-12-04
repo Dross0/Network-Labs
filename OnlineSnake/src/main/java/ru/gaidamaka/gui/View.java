@@ -2,6 +2,7 @@ package ru.gaidamaka.gui;
 
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
+import ru.gaidamaka.config.GameConfig;
 import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.PlayerWithScore;
 
@@ -17,4 +18,6 @@ public interface View {
     void updateCurrentGameInfo(@NotNull String owner, int gameFieldHeight, int gameFieldWidth, int foodNumber);
 
     void showUserListInfo(@NotNull List<PlayerWithScore> playerWithScoreList);
+
+    void setConfig(@NotNull GameConfig gameConfig);
 }
