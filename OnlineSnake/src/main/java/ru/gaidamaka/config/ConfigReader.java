@@ -3,7 +3,6 @@ package ru.gaidamaka.config;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.gaidamaka.SnakesProto;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,45 +17,37 @@ public final class ConfigReader {
     private ConfigReader() {
     }
 
-    public static SnakesProto.GameConfig readProtoConfig(@NotNull String configPath) {
+    public static Config readProtoConfig(@NotNull String configPath) {
         Objects.requireNonNull(configPath, "Config path cant be null");
         try (InputStream cfgStream = ConfigReader.class.getClassLoader().getResourceAsStream(configPath)) {
             Properties properties = new Properties();
             properties.load(cfgStream);
-            return parseProtoConfig(properties);
+            return parseConfig(properties);
         } catch (IOException e) {
             logger.error("Cant open config file={}", configPath, e);
             throw new IllegalStateException("Cant open file ={" + configPath + "}", e);
         }
     }
 
-    private static SnakesProto.GameConfig parseProtoConfig(Properties properties) {
-        return SnakesProto.GameConfig.newBuilder()
-                .setDeadFoodProb(
-                        (float) readDoubleProperty(properties, "food.deadProb").orElseThrow()
-                )
-                .setFoodPerPlayer(
-                        (float) readDoubleProperty(properties, "food.perPlayer").orElseThrow()
-                )
-                .setHeight(
-                        readIntegerProperty(properties, "field.height").orElseThrow()
-                )
-                .setWidth(
-                        readIntegerProperty(properties, "field.width").orElseThrow()
-                )
-                .setFoodStatic(
-                        readIntegerProperty(properties, "food.static").orElseThrow()
-                )
-                .setNodeTimeoutMs(
-                        readIntegerProperty(properties, "node.timeout.ms").orElseThrow()
-                )
-                .setPingDelayMs(
-                        readIntegerProperty(properties, "ping.delay.ms").orElseThrow()
-                )
-                .setStateDelayMs(
-                        readIntegerProperty(properties, "state.delay.ms").orElseThrow()
-                )
-                .build();
+    private static Config parseConfig(Properties properties) {
+        Config.Builder builder = Config.Builder.aConfig();
+        readDoubleProperty(properties, "food.deadProb")
+                .ifPresent(builder::withDeadSnakeToFoodProbability);
+        readIntegerProperty(properties, "food.perPlayer")
+                .ifPresent(builder::withFoodPerPlayer);
+        readIntegerProperty(properties, "field.height")
+                .ifPresent(builder::withFieldHeight);
+        readIntegerProperty(properties, "field.width")
+                .ifPresent(builder::withFieldWidth);
+        readIntegerProperty(properties, "food.static")
+                .ifPresent(builder::withFoodStaticNumber);
+        readIntegerProperty(properties, "node.timeout.ms")
+                .ifPresent(builder::withNodeTimeoutMs);
+        readIntegerProperty(properties, "ping.delay.ms")
+                .ifPresent(builder::withPingDelayMs);
+        readIntegerProperty(properties, "state.delay.ms")
+                .ifPresent(builder::withStateDelayMs);
+        return builder.build();
     }
 
     private static OptionalDouble readDoubleProperty(Properties properties, String key) {

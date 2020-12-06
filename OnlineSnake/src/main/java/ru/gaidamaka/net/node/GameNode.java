@@ -1,9 +1,12 @@
 package ru.gaidamaka.net.node;
 
 import org.jetbrains.annotations.NotNull;
-import ru.gaidamaka.SnakesProto;
 import ru.gaidamaka.net.NetNode;
+import ru.gaidamaka.net.NodeHandler;
+import ru.gaidamaka.net.messages.Message;
 
 public interface GameNode {
-    void handleMessage(@NotNull NetNode sender, @NotNull SnakesProto.GameMessage message);
+    void handleMessage(@NotNull NetNode sender, @NotNull Message message);
+
+    void setNodeHandler(@NotNull NodeHandler nodeHandler);
 }

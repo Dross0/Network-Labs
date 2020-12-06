@@ -1,7 +1,8 @@
 package ru.gaidamaka.net.node;
 
 import org.jetbrains.annotations.NotNull;
-import ru.gaidamaka.SnakesProto;
+import ru.gaidamaka.config.Config;
+import ru.gaidamaka.net.Role;
 
 import java.util.Objects;
 
@@ -10,17 +11,18 @@ public final class NodeFactory {
     }
 
     @NotNull
-    public static GameNode createNode(@NotNull SnakesProto.NodeRole role) {
-        Objects.requireNonNull(role);
+    public static GameNode createNode(@NotNull Role role, @NotNull Config config) {
+        Objects.requireNonNull(role, "Role cant be null");
+        Objects.requireNonNull(config, "Config cant be null");
         switch (role) {
             case MASTER:
-                return new MasterNode(null);
+                return new MasterNode(config);
             case DEPUTY:
-                return new DeputyNode();
+                return new DeputyNode(config);
             case NORMAL:
-                return new NormalNode();
+                return new NormalNode(config);
             case VIEWER:
-                return new ViewerNode();
+                return new ViewerNode(config);
             default:
                 throw new IllegalArgumentException("Unknown role");
         }

@@ -1,9 +1,10 @@
 package ru.gaidamaka.net;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.gaidamaka.SnakesProto;
+import ru.gaidamaka.net.messages.Message;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -13,16 +14,21 @@ import java.util.Objects;
 
 public class Sender implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Sender.class);
-    private static final int SEND_PERIOD_MS = 100;
     @NotNull
     private final MessageStorage storage;
 
     @NotNull
     private final DatagramSocket socket;
+    private final int nodeTimeoutMs;
 
-    public Sender(@NotNull MessageStorage storage, @NotNull DatagramSocket socket) {
+    public Sender(@NotNull MessageStorage storage, @NotNull DatagramSocket socket, int nodeTimeoutMs) {
         this.storage = Objects.requireNonNull(storage, "Storage cant be null");
         this.socket = Objects.requireNonNull(socket, "Socket cant be null");
+        if (nodeTimeoutMs < 0) {
+            logger.error("Get negative node timeout = {}", nodeTimeoutMs);
+            throw new IllegalArgumentException("Node timeout=" + nodeTimeoutMs + " cant be negative");
+        }
+        this.nodeTimeoutMs = nodeTimeoutMs;
     }
 
 
@@ -32,7 +38,7 @@ public class Sender implements Runnable {
             storage.resendUnconfirmedMessages();
             sendMessages();
             try {
-                Thread.sleep(SEND_PERIOD_MS);
+                Thread.sleep(nodeTimeoutMs);
             } catch (InterruptedException e) {
                 logger.error("Sender was interrupted while sleep", e);
                 return;
@@ -40,17 +46,17 @@ public class Sender implements Runnable {
         }
     }
 
-    public void addMessageToSend(@NotNull NetNode receiver, @NotNull SnakesProto.GameMessage message) {
+    public void addMessageToSend(@NotNull NetNode receiver, @NotNull Message message) {
         storage.addMessageToSend(receiver, message);
     }
 
     private void sendMessages() {
-        Map<SnakesProto.GameMessage, NetNode> messagesToSend = storage.getMessagesToSend();
+        Map<Message, NetNode> messagesToSend = storage.getMessagesToSend();
         messagesToSend.forEach((gameMessage, netNode) -> sendMessage(netNode, gameMessage));
     }
 
-    private void sendMessage(@NotNull NetNode receiver, @NotNull SnakesProto.GameMessage message) {
-        byte[] messageBytes = message.toByteArray();
+    private void sendMessage(@NotNull NetNode receiver, @NotNull Message message) {
+        byte[] messageBytes = SerializationUtils.serialize(message);
         DatagramPacket packet = new DatagramPacket(
                 messageBytes,
                 messageBytes.length,

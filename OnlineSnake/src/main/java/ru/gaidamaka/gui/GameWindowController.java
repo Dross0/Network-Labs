@@ -160,7 +160,7 @@ public class GameWindowController implements View {
     }
 
     private void paintPoint(@NotNull Point point, @NotNull Paint color) {
-        fieldCells[point.getY()][point.getX()].setFill(color);
+        Platform.runLater(() -> fieldCells[point.getY()][point.getX()].setFill(color));
     }
 
     @Override

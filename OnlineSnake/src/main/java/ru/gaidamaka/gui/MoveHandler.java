@@ -2,9 +2,7 @@ package ru.gaidamaka.gui;
 
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
-import ru.gaidamaka.SnakesProto;
-import ru.gaidamaka.config.GameConfig;
-import ru.gaidamaka.config.ProtoGameConfigAdapter;
+import ru.gaidamaka.config.Config;
 import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.Game;
 import ru.gaidamaka.game.GameObserver;
@@ -13,6 +11,7 @@ import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.Player;
 import ru.gaidamaka.game.player.PlayerWithScore;
 import ru.gaidamaka.game.snake.SnakeInfo;
+import ru.gaidamaka.net.MainNodeHandler;
 import ru.gaidamaka.presenter.GamePresenter;
 import ru.gaidamaka.presenter.MoveEvent;
 import ru.gaidamaka.presenter.UserEvent;
@@ -26,7 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class MoveHandler implements GamePresenter, GameObserver {
-    private final long movePeriodMs;
+    //@NotNull
+    //private final MainNodeHandler mainNodeHandler;
     private Player player;
     private final Map<Player, Direction> moves = new ConcurrentHashMap<>();
     private Game game;
@@ -35,17 +35,17 @@ public class MoveHandler implements GamePresenter, GameObserver {
     private View view;
     private Player zombie;
 
-    @NotNull
-    private final SnakesProto.GameConfig playerConfig;
+    private final @NotNull Config playerConfig;
 
     @NotNull
     private final PlayerColorMapper colorMapper;
     private Thread zombieSimThread;
     private Thread playerMoveThread;
 
-    public MoveHandler(@NotNull SnakesProto.GameConfig playerConfig, long movePeriodMs) {
+    public MoveHandler(@NotNull Config playerConfig, MainNodeHandler mainNodeHandler) {
         this.playerConfig = Objects.requireNonNull(playerConfig, "Config cant be null");
-        this.movePeriodMs = movePeriodMs;
+        //this.mainNodeHandler = Objects.requireNonNull(mainNodeHandler, "Node handler cant be null");
+        //this.mainNodeHandler.setConfig(playerConfig);
         this.colorMapper = new PlayerColorMapper();
     }
 
@@ -70,7 +70,7 @@ public class MoveHandler implements GamePresenter, GameObserver {
         return () -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    Thread.sleep(movePeriodMs);
+                    Thread.sleep(playerConfig.getStateDelayMs());
                 } catch (InterruptedException e) {
                     return;
                 }
@@ -109,11 +109,15 @@ public class MoveHandler implements GamePresenter, GameObserver {
         }
     }
 
+//    private void handleNewGameEvent(){
+//        mainNodeHandler.changeNodeRole(SnakesProto.NodeRole.MASTER);
+//    }
+
+
     private void handleNewGameEvent() {
-        GameConfig configAdapter = new ProtoGameConfigAdapter(playerConfig);
-        game = new Game(configAdapter);
+        game = new Game(playerConfig);
         game.addObserver(this);
-        view.setConfig(configAdapter);
+        view.setConfig(playerConfig);
         testStart();
     }
 

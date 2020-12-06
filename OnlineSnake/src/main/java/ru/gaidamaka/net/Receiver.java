@@ -1,15 +1,18 @@
 package ru.gaidamaka.net;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.lang3.SerializationException;
+import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.gaidamaka.SnakesProto;
+import ru.gaidamaka.net.messages.Message;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.Objects;
+import java.util.Optional;
 
 public class Receiver implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Receiver.class);
@@ -32,8 +35,10 @@ public class Receiver implements Runnable {
             try {
                 socket.receive(packet);
                 NetNode sender = parseSender(packet);
-                SnakesProto.GameMessage gameMessage = parseMessage(packet);
-                storage.addReceivedMessage(sender, gameMessage);
+                parseMessage(packet)
+                        .ifPresent(message ->
+                                storage.addReceivedMessage(sender, message)
+                        );
             } catch (InvalidProtocolBufferException e) {
                 logger.error("Cant parse GameMessage from packet", e);
             } catch (IOException e) {
@@ -42,11 +47,18 @@ public class Receiver implements Runnable {
         }
     }
 
-    private SnakesProto.GameMessage parseMessage(DatagramPacket packet) throws InvalidProtocolBufferException {
-        return SnakesProto.GameMessage.parseFrom(packet.getData());
+    @NotNull
+    private Optional<Message> parseMessage(@NotNull DatagramPacket packet) {
+        try {
+            return Optional.of(SerializationUtils.deserialize(packet.getData()));
+        } catch (SerializationException e) {
+            logger.error("Cant deserialize message", e);
+            return Optional.empty();
+        }
     }
 
-    private NetNode parseSender(DatagramPacket packet) {
+    @NotNull
+    private NetNode parseSender(@NotNull DatagramPacket packet) {
         return new NetNode(packet.getAddress(), packet.getPort());
     }
 }

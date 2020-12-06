@@ -2,9 +2,10 @@ package ru.gaidamaka.game.player;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class PlayerWithScore {
+public class PlayerWithScore implements Serializable {
     @NotNull
     private final Player player;
     private final int score;

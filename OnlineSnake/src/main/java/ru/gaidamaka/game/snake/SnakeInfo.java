@@ -6,11 +6,12 @@ import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.Player;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class SnakeInfo {
+public class SnakeInfo implements Serializable {
     @NotNull
     private final List<Point> snakePoints;
 

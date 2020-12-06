@@ -1,20 +1,18 @@
 package ru.gaidamaka.net.gamelistchecker;
 
+import org.apache.commons.lang3.SerializationException;
+import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.gaidamaka.SnakesProto;
-import ru.gaidamaka.config.ProtoGameConfigAdapter;
 import ru.gaidamaka.net.GameInfo;
+import ru.gaidamaka.net.messages.AnnouncementMessage;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameListChecker implements GameListObservable {
@@ -61,10 +59,11 @@ public class GameListChecker implements GameListObservable {
                 while (!Thread.currentThread().isInterrupted()) {
                     DatagramPacket datagramPacket = new DatagramPacket(buffer, BUFFER_SIZE);
                     socket.receive(datagramPacket);
-                    GameInfo gameInfo = parseGameInfo(SnakesProto.GameMessage.AnnouncementMsg.parseFrom(buffer));
-                    gameInfos.add(gameInfo);
-                    notifyObservers();
-
+                    deserializeAnnouncementMessage(buffer).
+                            ifPresent(announcementMessage -> {
+                                gameInfos.add(parseGameInfo(announcementMessage));
+                                notifyObservers();
+                            });
                 }
             } catch (IOException e) {
                 logger.error("Problem with multicast socket on port={}", port, e);
@@ -72,6 +71,14 @@ public class GameListChecker implements GameListObservable {
         };
     }
 
+    private Optional<AnnouncementMessage> deserializeAnnouncementMessage(byte[] messageBytes) {
+        try {
+            return Optional.of(SerializationUtils.deserialize(messageBytes));
+        } catch (SerializationException e) {
+            logger.error("Cant deserialize announcement message");
+            return Optional.empty();
+        }
+    }
 
     @Override
     public void addObserver(@NotNull GameListObserver observer) {
@@ -92,11 +99,11 @@ public class GameListChecker implements GameListObservable {
         }
     }
 
-    private GameInfo parseGameInfo(SnakesProto.GameMessage.AnnouncementMsg announcementMsg) {
+    private GameInfo parseGameInfo(@NotNull AnnouncementMessage announcementMsg) {
         return new GameInfo(
-                new ProtoGameConfigAdapter(announcementMsg.getConfig()),
-                announcementMsg.getCanJoin(),
-                announcementMsg.getPlayers()
+                announcementMsg.getConfig(),
+                announcementMsg.getPlayersNumber(),
+                announcementMsg.canJoin()
         );
     }
 

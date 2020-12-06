@@ -50,6 +50,7 @@ public class PlayerColorMapper {
         return playerColors.containsKey(player);
     }
 
+    @NotNull
     public Set<Player> getRegisteredPlayers() {
         return Collections.unmodifiableSet(playerColors.keySet());
     }

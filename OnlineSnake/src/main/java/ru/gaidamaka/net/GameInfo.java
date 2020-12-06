@@ -1,7 +1,6 @@
 package ru.gaidamaka.net;
 
 import org.jetbrains.annotations.NotNull;
-import ru.gaidamaka.SnakesProto;
 import ru.gaidamaka.config.GameConfig;
 
 import java.util.Objects;
@@ -9,12 +8,12 @@ import java.util.Objects;
 public class GameInfo {
     private final GameConfig config;
     private final boolean canJoin;
-    private final SnakesProto.GamePlayers gamePlayers;
+    private final int playersNumber;
 
-    public GameInfo(@NotNull GameConfig config, boolean canJoin, @NotNull SnakesProto.GamePlayers gamePlayers) {
+    public GameInfo(@NotNull GameConfig config, int playersNumber, boolean canJoin) {
         this.config = Objects.requireNonNull(config);
         this.canJoin = canJoin;
-        this.gamePlayers = Objects.requireNonNull(gamePlayers);
+        this.playersNumber = playersNumber;
     }
 
     @NotNull
@@ -26,9 +25,8 @@ public class GameInfo {
         return canJoin;
     }
 
-    @NotNull
-    public SnakesProto.GamePlayers getGamePlayers() {
-        return gamePlayers;
+    public int getPlayersNumber() {
+        return playersNumber;
     }
 
     @Override
@@ -37,12 +35,12 @@ public class GameInfo {
         if (o == null || getClass() != o.getClass()) return false;
         GameInfo gameInfo = (GameInfo) o;
         return canJoin == gameInfo.canJoin &&
-                Objects.equals(config, gameInfo.config) &&
-                Objects.equals(gamePlayers, gameInfo.gamePlayers);
+                playersNumber == gameInfo.playersNumber &&
+                Objects.equals(config, gameInfo.config);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(config, canJoin, gamePlayers);
+        return Objects.hash(config, canJoin, playersNumber);
     }
 }
