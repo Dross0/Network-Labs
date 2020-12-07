@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Objects;
 
 public class NetNode implements Serializable {
@@ -17,6 +18,10 @@ public class NetNode implements Serializable {
             throw new IllegalArgumentException("Port must be positive");
         }
         this.port = port;
+    }
+
+    public NetNode(@NotNull InetSocketAddress multicastInfo) {
+        this(multicastInfo.getAddress(), multicastInfo.getPort());
     }
 
     @NotNull
@@ -40,5 +45,13 @@ public class NetNode implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(address, port);
+    }
+
+    @Override
+    public String toString() {
+        return "NetNode{" +
+                "address=" + address +
+                ", port=" + port +
+                '}';
     }
 }

@@ -23,18 +23,30 @@ import ru.gaidamaka.config.GameConfig;
 import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.PlayerWithScore;
-import ru.gaidamaka.presenter.ExitEvent;
 import ru.gaidamaka.presenter.GamePresenter;
-import ru.gaidamaka.presenter.MoveEvent;
-import ru.gaidamaka.presenter.NewGameEvent;
+import ru.gaidamaka.presenter.event.ExitEvent;
+import ru.gaidamaka.presenter.event.JoinToGameEvent;
+import ru.gaidamaka.presenter.event.MoveEvent;
+import ru.gaidamaka.presenter.event.NewGameEvent;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class GameWindowController implements View {
     private static final Paint FRUIT_COLOR = Color.GREEN;
     private static final Paint EMPTY_CELL_COLOR = Color.WHITE;
+    @FXML
+    private TableColumn<GameInfoWithButton, String> masterColumn;
+    @FXML
+    private TableColumn<GameInfoWithButton, Integer> playersNumberColumn;
+    @FXML
+    private TableColumn<GameInfoWithButton, String> fieldSizeColumn;
+    @FXML
+    private TableColumn<GameInfoWithButton, String> foodColumn;
+    @FXML
+    private TableColumn<GameInfoWithButton, Button> connectButtonColumn;
     @FXML
     private TableColumn<PlayerWithScore, String> playerNameColumn;
     @FXML
@@ -52,11 +64,12 @@ public class GameWindowController implements View {
     @FXML
     private Button newGameButton;
     @FXML
-    private TableView gameListTable;
+    private TableView<GameInfoWithButton> gameListTable;
     @FXML
     private BorderPane gameFieldPane;
 
     private final ObservableList<PlayerWithScore> playersObservableList = FXCollections.observableArrayList();
+    private final ObservableList<GameInfoWithButton> gameInfoObservableList = FXCollections.observableArrayList();
 
     private Rectangle[][] fieldCells;
 
@@ -76,6 +89,7 @@ public class GameWindowController implements View {
         this.stage.addEventHandler(KeyEvent.KEY_RELEASED, getMovementEventHandler());
         this.stage.setOnCloseRequest(event -> close());
         initPlayersInfoTable();
+        initGameListTable();
         setActionOnButtons();
     }
 
@@ -99,7 +113,7 @@ public class GameWindowController implements View {
             }
             getDirectionByKeyCode(event.getCode())
                     .ifPresent(direction ->
-                            gamePresenter.fireEvent(new MoveEvent(direction), event.getCode().isArrowKey())
+                            gamePresenter.fireEvent(new MoveEvent(direction))
                     );
         };
     }
@@ -135,7 +149,7 @@ public class GameWindowController implements View {
         fieldCells = new Rectangle[gameFieldHeight][gameFieldWidth];
         for (int row = 0; row < gameFieldHeight; ++row) {
             for (int col = 0; col < gameFieldWidth; ++col) {
-                Rectangle rectangle = new Rectangle(rectWidth, rectHeight, Color.WHITE);
+                Rectangle rectangle = new Rectangle(rectWidth, rectHeight, EMPTY_CELL_COLOR);
                 fieldCells[row][col] = rectangle;
                 gridPane.add(rectangle, col, row);
             }
@@ -160,7 +174,7 @@ public class GameWindowController implements View {
     }
 
     private void paintPoint(@NotNull Point point, @NotNull Paint color) {
-        Platform.runLater(() -> fieldCells[point.getY()][point.getX()].setFill(color));
+        fieldCells[point.getY()][point.getX()].setFill(color);
     }
 
     @Override
@@ -181,6 +195,33 @@ public class GameWindowController implements View {
     public void setConfig(@NotNull GameConfig gameConfig) {
         this.gameConfig = Objects.requireNonNull(gameConfig, "Config cant be null");
         builtField();
+    }
+
+    @Override
+    public void showGameList(@NotNull Set<GameInfoWithButton> gameInfoWithButtons) {
+        gameInfoWithButtons.forEach(gameInfoWithButton -> {
+            Button button = gameInfoWithButton.getButton();
+            button.setOnAction(event ->
+                    gamePresenter.fireEvent(
+                            new JoinToGameEvent(
+                                    gameInfoWithButton.getMasterNode(),
+                                    gameInfoWithButton.getMasterNodeName(),
+                                    gameInfoWithButton.getConfig()
+                            )
+                    )
+            );
+        });
+        gameInfoObservableList.setAll(gameInfoWithButtons);
+    }
+
+
+    private void initGameListTable() {
+        gameListTable.setItems(gameInfoObservableList);
+        masterColumn.setCellValueFactory(new PropertyValueFactory<>("masterNodeName"));
+        foodColumn.setCellValueFactory(new PropertyValueFactory<>("foodNumber"));
+        playersNumberColumn.setCellValueFactory(new PropertyValueFactory<>("playersNumber"));
+        fieldSizeColumn.setCellValueFactory(new PropertyValueFactory<>("fieldSize"));
+        connectButtonColumn.setCellValueFactory(new PropertyValueFactory<>("button"));
     }
 
     private void initPlayersInfoTable() {

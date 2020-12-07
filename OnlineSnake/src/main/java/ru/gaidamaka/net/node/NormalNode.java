@@ -4,17 +4,14 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.gaidamaka.config.Config;
+import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.GameState;
 import ru.gaidamaka.net.NetNode;
 import ru.gaidamaka.net.NodeHandler;
-import ru.gaidamaka.net.Role;
 import ru.gaidamaka.net.messagehandler.ErrorMessageHandler;
 import ru.gaidamaka.net.messagehandler.RoleChangeMessageHandler;
 import ru.gaidamaka.net.messagehandler.StateMessageHandler;
-import ru.gaidamaka.net.messages.ErrorMessage;
-import ru.gaidamaka.net.messages.Message;
-import ru.gaidamaka.net.messages.RoleChangeMessage;
-import ru.gaidamaka.net.messages.StateMessage;
+import ru.gaidamaka.net.messages.*;
 
 import java.util.Objects;
 
@@ -36,6 +33,10 @@ public class NormalNode implements
     public void handleMessage(@NotNull NetNode sender, @NotNull Message message) {
         Objects.requireNonNull(message, "Message cant be null");
         Objects.requireNonNull(sender, "Sender cant be null");
+        if (nodeHandler == null) {
+            logger.warn("node handler is null when message received");
+            return;
+        }
         switch (message.getType()) {
             case ROLE_CHANGE:
                 handle(sender, (RoleChangeMessage) message);
@@ -60,7 +61,6 @@ public class NormalNode implements
     @Override
     public void handle(@NotNull NetNode sender, @NotNull ErrorMessage errorMsg) {
         nodeHandler.showError(errorMsg.getErrorMessage());
-
     }
 
     @Override
@@ -90,5 +90,18 @@ public class NormalNode implements
             logger.warn("Unsupported roles at role change message={} from={}", roleChangeMsg, sender);
             throw new IllegalArgumentException("Unsupported roles at role change message=" + roleChangeMsg + " from=" + sender);
         }
+    }
+
+    @Override
+    public void makeMove(@NotNull Direction direction) {
+        nodeHandler.sendMessage(
+                nodeHandler.getMaster(),
+                new SteerMessage(direction)
+        );
+    }
+
+    @Override
+    public void stop() {
+        logger.info("Normal node stop");
     }
 }

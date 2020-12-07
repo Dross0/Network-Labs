@@ -7,11 +7,12 @@ import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.PlayerWithScore;
 import ru.gaidamaka.game.snake.SnakeInfo;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class GameState {
+public class GameState implements Serializable {
     @Unmodifiable
     @NotNull
     private final List<Point> fruits;

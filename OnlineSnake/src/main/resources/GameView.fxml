@@ -8,7 +8,7 @@
     <items>
         <BorderPane fx:id="gameFieldPane" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="800.0"
                     prefWidth="500.0"/>
-        <SplitPane dividerPositions="0.49594594594594593" orientation="VERTICAL" prefHeight="740.0" prefWidth="79.0">
+        <SplitPane dividerPositions="0.46365914786967416" orientation="VERTICAL" prefHeight="740.0" prefWidth="79.0">
             <items>
                 <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
                     <children>
@@ -45,11 +45,11 @@
                                    AnchorPane.bottomAnchor="1.0" AnchorPane.leftAnchor="0.0"
                                    AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="23.0">
                             <columns>
-                                <TableColumn prefWidth="75.0" text="Ведущий"/>
-                                <TableColumn prefWidth="53.0" text="#"/>
-                                <TableColumn prefWidth="94.0" text="Размер"/>
-                                <TableColumn prefWidth="75.0" text="Еда"/>
-                                <TableColumn prefWidth="88.0" text="Вход"/>
+                                <TableColumn fx:id="masterColumn" prefWidth="75.0" text="Ведущий"/>
+                                <TableColumn fx:id="playersNumberColumn" prefWidth="53.0" text="#"/>
+                                <TableColumn fx:id="fieldSizeColumn" prefWidth="94.0" text="Размер"/>
+                                <TableColumn fx:id="foodColumn" prefWidth="75.0" text="Еда"/>
+                                <TableColumn fx:id="connectButtonColumn" prefWidth="88.0" text="Вход"/>
                             </columns>
                         </TableView>
                         <Label layoutX="14.0" layoutY="6.0" text="Текущие игры :"/>

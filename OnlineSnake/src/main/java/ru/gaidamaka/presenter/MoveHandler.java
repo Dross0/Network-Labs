@@ -1,93 +1,52 @@
-package ru.gaidamaka.gui;
+package ru.gaidamaka.presenter;
 
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
 import ru.gaidamaka.config.Config;
-import ru.gaidamaka.game.Direction;
-import ru.gaidamaka.game.Game;
 import ru.gaidamaka.game.GameObserver;
 import ru.gaidamaka.game.GameState;
 import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.Player;
 import ru.gaidamaka.game.player.PlayerWithScore;
 import ru.gaidamaka.game.snake.SnakeInfo;
+import ru.gaidamaka.gui.GameInfoWithButton;
+import ru.gaidamaka.gui.PlayerColorMapper;
+import ru.gaidamaka.gui.View;
 import ru.gaidamaka.net.MainNodeHandler;
-import ru.gaidamaka.presenter.GamePresenter;
-import ru.gaidamaka.presenter.MoveEvent;
-import ru.gaidamaka.presenter.UserEvent;
-import ru.gaidamaka.presenter.UserEventType;
+import ru.gaidamaka.net.gamelistchecker.GameInfo;
+import ru.gaidamaka.net.gamelistchecker.GameListObserver;
+import ru.gaidamaka.net.node.Role;
+import ru.gaidamaka.presenter.event.JoinToGameEvent;
+import ru.gaidamaka.presenter.event.MoveEvent;
+import ru.gaidamaka.presenter.event.UserEvent;
+import ru.gaidamaka.presenter.event.UserEventType;
 
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class MoveHandler implements GamePresenter, GameObserver {
-    //@NotNull
-    //private final MainNodeHandler mainNodeHandler;
-    private Player player;
-    private final Map<Player, Direction> moves = new ConcurrentHashMap<>();
-    private Game game;
+public class MoveHandler implements GamePresenter, GameObserver, GameListObserver {
+    @NotNull
+    private final MainNodeHandler mainNodeHandler;
+
+    private final Set<GameInfoWithButton> gameInfoWithButtons = new HashSet<>();
 
     private GameState prevGameState;
-    private View view;
-    private Player zombie;
+    private final View view;
+    private String masterName;
 
     private final @NotNull Config playerConfig;
 
     @NotNull
     private final PlayerColorMapper colorMapper;
-    private Thread zombieSimThread;
-    private Thread playerMoveThread;
 
-    public MoveHandler(@NotNull Config playerConfig, MainNodeHandler mainNodeHandler) {
+    public MoveHandler(@NotNull Config playerConfig, @NotNull MainNodeHandler mainNodeHandler, @NotNull View view) {
         this.playerConfig = Objects.requireNonNull(playerConfig, "Config cant be null");
-        //this.mainNodeHandler = Objects.requireNonNull(mainNodeHandler, "Node handler cant be null");
-        //this.mainNodeHandler.setConfig(playerConfig);
+        this.mainNodeHandler = Objects.requireNonNull(mainNodeHandler, "Node handler cant be null");
+        this.mainNodeHandler.setConfig(playerConfig);
+        this.mainNodeHandler.addObserver(this);
+        this.mainNodeHandler.addGameListObserver(this);
         this.colorMapper = new PlayerColorMapper();
-    }
-
-    public void setView(@NotNull View view) {
         this.view = view;
-    }
-
-    private void testStart() {
-        player = game.registrationNewPlayer("Dross");
-        this.zombie = game.registrationNewPlayer("JJ");
-        if (zombieSimThread != null && playerMoveThread != null) {
-            zombieSimThread.interrupt();
-            playerMoveThread.interrupt();
-        }
-        this.zombieSimThread = new Thread(getZombieSimRunnable());
-        this.playerMoveThread = new Thread(getMoveRunnable());
-        zombieSimThread.start();
-        playerMoveThread.start();
-    }
-
-    private Runnable getMoveRunnable() {
-        return () -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    Thread.sleep(playerConfig.getStateDelayMs());
-                } catch (InterruptedException e) {
-                    return;
-                }
-                game.makeAllPlayersMove(moves);
-            }
-        };
-    }
-
-    private Runnable getZombieSimRunnable() {
-        return () -> {
-            try {
-                Thread.sleep(5000);
-                game.removePlayer(zombie);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        };
     }
 
     @Override
@@ -99,40 +58,29 @@ public class MoveHandler implements GamePresenter, GameObserver {
             handleNewGameEvent();
         } else if (userEvent.getType() == UserEventType.EXIT) {
             handleExitEvent();
+        } else if (userEvent.getType() == UserEventType.JOIN_GAME) {
+            handleJoinEvent((JoinToGameEvent) userEvent);
         }
+    }
+
+    private void handleJoinEvent(JoinToGameEvent userEvent) {
+        view.setConfig(userEvent.getConfig());
+        masterName = userEvent.getMasterName();
+        mainNodeHandler.joinToGame(userEvent.getMasterNode(), playerConfig.getPlayerName());
     }
 
     private void handleExitEvent() {
-        if (zombieSimThread != null && playerMoveThread != null) {
-            zombieSimThread.interrupt(); //test
-            playerMoveThread.interrupt(); //test
-        }
+        mainNodeHandler.exit();
     }
-
-//    private void handleNewGameEvent(){
-//        mainNodeHandler.changeNodeRole(SnakesProto.NodeRole.MASTER);
-//    }
-
 
     private void handleNewGameEvent() {
-        game = new Game(playerConfig);
-        game.addObserver(this);
         view.setConfig(playerConfig);
-        testStart();
-    }
-
-    @Override
-    public void fireEvent(MoveEvent event, boolean arrowKey) {
-        Objects.requireNonNull(event, "User event cant be null");
-        if (arrowKey) {
-            moves.put(player, event.getDirection());
-        } else {
-            moves.put(zombie, event.getDirection());
-        }
+        mainNodeHandler.changeNodeRole(Role.MASTER);
+        masterName = playerConfig.getPlayerName();
     }
 
     private void handleMoveEvent(MoveEvent event) {
-        moves.put(player, event.getDirection());
+        mainNodeHandler.handleMove(event.getDirection());
     }
 
     @Override
@@ -144,7 +92,7 @@ public class MoveHandler implements GamePresenter, GameObserver {
         gameState.getFruits().forEach(view::drawFruit);
         updateSnakes(gameState);
         view.updateCurrentGameInfo(
-                player.getName(),  //FIXME make real master name
+                masterName == null ? "" : masterName,
                 gameState.getGameConfig().getFieldHeight(),
                 gameState.getGameConfig().getFieldWidth(),
                 gameState.getFruits().size()
@@ -226,5 +174,11 @@ public class MoveHandler implements GamePresenter, GameObserver {
                 .noneMatch(point ->
                         point.equals(snakeHead)
                 );
+    }
+
+    @Override
+    public void updateGameList(@NotNull Collection<GameInfo> gameInfos) {
+        gameInfos.forEach(gameInfo -> gameInfoWithButtons.add(new GameInfoWithButton(gameInfo)));
+        view.showGameList(Set.copyOf(gameInfoWithButtons));
     }
 }

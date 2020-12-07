@@ -2,7 +2,6 @@ package ru.gaidamaka.net.node;
 
 import org.jetbrains.annotations.NotNull;
 import ru.gaidamaka.config.Config;
-import ru.gaidamaka.net.Role;
 
 import java.util.Objects;
 
@@ -21,8 +20,6 @@ public final class NodeFactory {
                 return new DeputyNode(config);
             case NORMAL:
                 return new NormalNode(config);
-            case VIEWER:
-                return new ViewerNode(config);
             default:
                 throw new IllegalArgumentException("Unknown role");
         }

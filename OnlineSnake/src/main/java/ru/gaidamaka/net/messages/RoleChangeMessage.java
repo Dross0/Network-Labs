@@ -1,7 +1,7 @@
 package ru.gaidamaka.net.messages;
 
 import org.jetbrains.annotations.NotNull;
-import ru.gaidamaka.net.Role;
+import ru.gaidamaka.net.node.Role;
 
 import java.util.Objects;
 

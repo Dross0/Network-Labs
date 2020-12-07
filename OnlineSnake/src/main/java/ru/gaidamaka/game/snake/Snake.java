@@ -2,6 +2,7 @@ package ru.gaidamaka.game.snake;
 
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
 import ru.gaidamaka.game.Direction;
 import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.cell.PointUtils;
@@ -43,14 +44,15 @@ public class Snake implements Iterable<Point> {
         this.currentDir = calculateCurrentDirection(head, tail);
     }
 
-    public Snake(@NotNull List<Point> points,
+    public Snake(@Unmodifiable @NotNull List<Point> points,
                  @NotNull Direction currentDir,
                  int xCoordinateLimit,
                  int yCoordinateLimit) {
         this.xCoordinateLimit = xCoordinateLimit;
         this.yCoordinateLimit = yCoordinateLimit;
         this.currentDir = Objects.requireNonNull(currentDir, "Direction cant be null");
-        snakePoints = List.copyOf(points);
+        snakePoints = new ArrayList<>(points.size());
+        snakePoints.addAll(points);
         head = snakePoints.get(0);
         tail = snakePoints.get(snakePoints.size() - 1);
 

@@ -1,4 +1,4 @@
-package ru.gaidamaka.presenter;
+package ru.gaidamaka.presenter.event;
 
 public class NewGameEvent extends UserEvent {
     public NewGameEvent() {

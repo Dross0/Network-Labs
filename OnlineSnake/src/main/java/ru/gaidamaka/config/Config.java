@@ -1,7 +1,12 @@
 package ru.gaidamaka.config;
 
 
-public class Config implements GameConfig {
+import org.jetbrains.annotations.NotNull;
+
+import java.io.Serializable;
+import java.util.Objects;
+
+public class Config implements GameConfig, Serializable {
     private final int fieldWidth;
     private final int fieldHeight;
     private final double deadSnakeToFoodProbability;
@@ -10,6 +15,7 @@ public class Config implements GameConfig {
     private final int stateDelayMs;
     private final int foodPerPlayer;
     private final int nodeTimeoutMs;
+    private final String playerName;
 
     private Config(int fieldWidth,
                    int fieldHeight,
@@ -18,7 +24,8 @@ public class Config implements GameConfig {
                    int pingDelayMs,
                    int stateDelayMs,
                    int foodPerPlayer,
-                   int nodeTimeoutMs) {
+                   int nodeTimeoutMs,
+                   @NotNull String playerName) {
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
         this.deadSnakeToFoodProbability = deadSnakeToFoodProbability;
@@ -27,6 +34,12 @@ public class Config implements GameConfig {
         this.stateDelayMs = stateDelayMs;
         this.foodPerPlayer = foodPerPlayer;
         this.nodeTimeoutMs = nodeTimeoutMs;
+        this.playerName = playerName;
+    }
+
+    @NotNull
+    public String getPlayerName() {
+        return playerName;
     }
 
     public int getPingDelayMs() {
@@ -61,6 +74,7 @@ public class Config implements GameConfig {
         return foodPerPlayer;
     }
 
+
     @Override
     public double getProbabilityOfDeadSnakeCellsToFood() {
         return deadSnakeToFoodProbability;
@@ -75,12 +89,18 @@ public class Config implements GameConfig {
         private int pingDelayMs = 100;
         private int stateDelayMs = 1000;
         private int nodeTimeoutMs = 800;
+        private String playerName = "PLAYER";
 
         private Builder() {
         }
 
         public static Builder aConfig() {
             return new Builder();
+        }
+
+        public Builder withPlayerName(@NotNull String playerName) {
+            this.playerName = Objects.requireNonNull(playerName);
+            return this;
         }
 
         public Builder withFieldWidth(int fieldWidth) {
@@ -132,7 +152,8 @@ public class Config implements GameConfig {
                     pingDelayMs,
                     stateDelayMs,
                     foodPerPlayer,
-                    nodeTimeoutMs
+                    nodeTimeoutMs,
+                    playerName
             );
             ConfigValidator validator = new ConfigValidator(config);
             validator.validate();

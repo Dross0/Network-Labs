@@ -40,6 +40,7 @@ public class Sender implements Runnable {
             try {
                 Thread.sleep(nodeTimeoutMs);
             } catch (InterruptedException e) {
+                sendMessages();
                 logger.error("Sender was interrupted while sleep", e);
                 return;
             }

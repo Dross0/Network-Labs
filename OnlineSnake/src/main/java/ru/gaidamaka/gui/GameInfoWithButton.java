@@ -1,0 +1,83 @@
+package ru.gaidamaka.gui;
+
+import javafx.scene.control.Button;
+import org.jetbrains.annotations.NotNull;
+import ru.gaidamaka.config.Config;
+import ru.gaidamaka.config.GameConfig;
+import ru.gaidamaka.net.NetNode;
+import ru.gaidamaka.net.gamelistchecker.GameInfo;
+
+import java.util.Objects;
+
+public class GameInfoWithButton {
+    private final @NotNull NetNode masterNode;
+    private final int playersNumber;
+    @NotNull
+    private final GameConfig config;
+    private final boolean canJoin;
+
+    private final String masterNodeName;
+    private final String fieldSize;
+    private final String foodNumber;
+
+    private final Button button;
+
+    public GameInfoWithButton(@NotNull GameInfo gameInfo) {
+        Objects.requireNonNull(gameInfo);
+        this.playersNumber = gameInfo.getPlayersNumber();
+        this.config = gameInfo.getConfig();
+        this.masterNode = gameInfo.getMasterNode();
+        this.canJoin = gameInfo.isCanJoin();
+        this.button = new Button("Вход");
+        this.fieldSize = config.getFieldHeight() + "x" + config.getFieldWidth();
+        this.foodNumber = config.getFoodStaticNumber() + ": x" + config.getFoodPerPlayer();
+        this.masterNodeName = ((Config) config).getPlayerName();
+    }
+
+    @NotNull
+    public GameConfig getConfig() {
+        return config;
+    }
+
+    @NotNull
+    public NetNode getMasterNode() {
+        return masterNode;
+    }
+
+    @NotNull
+    public Button getButton() {
+        return button;
+    }
+
+    @NotNull
+    public String getFoodNumber() {
+        return foodNumber;
+    }
+
+    public int getPlayersNumber() {
+        return playersNumber;
+    }
+
+    @NotNull
+    public String getMasterNodeName() {
+        return masterNodeName;
+    }
+
+    @NotNull
+    public String getFieldSize() {
+        return fieldSize;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        GameInfoWithButton that = (GameInfoWithButton) o;
+        return masterNode.equals(that.masterNode);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(masterNode);
+    }
+}

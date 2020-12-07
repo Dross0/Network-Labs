@@ -16,7 +16,7 @@ import java.util.Optional;
 
 public class Receiver implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Receiver.class);
-    private static final int PACKET_SIZE = 1024;
+    private static final int PACKET_SIZE = 8096;
     @NotNull
     private final MessageStorage storage;
 

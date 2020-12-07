@@ -6,10 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.Properties;
+import java.util.*;
 
 public final class ConfigReader {
     private static final Logger logger = LoggerFactory.getLogger(ConfigReader.class);
@@ -47,6 +44,8 @@ public final class ConfigReader {
                 .ifPresent(builder::withPingDelayMs);
         readIntegerProperty(properties, "state.delay.ms")
                 .ifPresent(builder::withStateDelayMs);
+        Optional.ofNullable(properties.getProperty("player.name"))
+                .ifPresent(builder::withPlayerName);
         return builder.build();
     }
 

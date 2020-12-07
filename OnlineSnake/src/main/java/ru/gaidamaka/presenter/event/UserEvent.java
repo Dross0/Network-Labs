@@ -1,4 +1,4 @@
-package ru.gaidamaka.presenter;
+package ru.gaidamaka.presenter.event;
 
 import org.jetbrains.annotations.NotNull;
 

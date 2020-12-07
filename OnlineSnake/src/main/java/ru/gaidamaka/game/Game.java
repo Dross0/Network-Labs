@@ -91,7 +91,7 @@ public class Game implements GameObservable {
         );
     }
 
-
+    @NotNull
     public Player registrationNewPlayer(@NotNull String playerName) {
         Player player = Player.create(playerName);
         List<Cell> headAndTailOfNewSnake = getNewSnakeHeadAndTail();

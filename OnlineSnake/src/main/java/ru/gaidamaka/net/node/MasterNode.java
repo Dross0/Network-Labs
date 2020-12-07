@@ -9,18 +9,19 @@ import ru.gaidamaka.game.Game;
 import ru.gaidamaka.game.GameObserver;
 import ru.gaidamaka.game.GameState;
 import ru.gaidamaka.game.player.Player;
+import ru.gaidamaka.net.GameRecoveryInformation;
+import ru.gaidamaka.net.Neighbor;
 import ru.gaidamaka.net.NetNode;
 import ru.gaidamaka.net.NodeHandler;
-import ru.gaidamaka.net.Role;
 import ru.gaidamaka.net.messagehandler.JoinMessageHandler;
+import ru.gaidamaka.net.messagehandler.PingMessageHandler;
 import ru.gaidamaka.net.messagehandler.RoleChangeMessageHandler;
 import ru.gaidamaka.net.messagehandler.SteerMessageHandler;
 import ru.gaidamaka.net.messages.*;
+import ru.gaidamaka.utils.DurationUtils;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MasterNode implements
@@ -28,19 +29,57 @@ public class MasterNode implements
         RoleChangeMessageHandler,
         JoinMessageHandler,
         SteerMessageHandler,
+        PingMessageHandler,
         GameObserver {
     private static final Logger logger = LoggerFactory.getLogger(MasterNode.class);
+    public static final int ANNOUNCEMENT_SEND_PERIOD = 1000;
 
     private final Game game;
     private final @NotNull Config gameConfig;
     private final Map<Player, Direction> playersMoves = new ConcurrentHashMap<>();
-    private final Map<NetNode, Player> registeredNodesAsPlayers = new ConcurrentHashMap<>();
+    private final Map<Neighbor, Player> registeredNodesAsPlayers = new ConcurrentHashMap<>();
+    private final Player currentPlayer;
     private NodeHandler nodeHandler;
+    private final Timer timer = new Timer();
+
+    private NetNode deputy;
 
     public MasterNode(@NotNull Config gameConfig) {
         this.gameConfig = Objects.requireNonNull(gameConfig);
-        game = new Game(gameConfig);
+        this.game = new Game(gameConfig);
+        this.game.addObserver(this);
+        this.currentPlayer = game.registrationNewPlayer(gameConfig.getPlayerName());
         startGameUpdateTimer();
+        startSendAnnouncementMessages();
+        startRemovingDisconnectedPlayers();
+    }
+
+    public MasterNode(@NotNull Config config, @NotNull GameRecoveryInformation recoveryInformation) {
+        this.gameConfig = Objects.requireNonNull(config);
+        this.game = new Game(recoveryInformation.getGameState());
+        this.game.addObserver(this);
+        this.currentPlayer = Player.create(gameConfig.getPlayerName());
+        recoveryInformation.getRegisteredPlayers().forEach((neighbor, player) -> {
+            if (!player.equals(currentPlayer)) {
+                registerNewPlayer(neighbor, player.getName());
+            }
+        });
+        startGameUpdateTimer();
+        startSendAnnouncementMessages();
+        startRemovingDisconnectedPlayers();
+    }
+
+    private void startSendAnnouncementMessages() {
+        TimerTask announcementSendTask = new TimerTask() {
+            @Override
+            public void run() {
+                nodeHandler.sendMessage(
+                        new NetNode(nodeHandler.getMulticastInfo()),
+                        new AnnouncementMessage(gameConfig, registeredNodesAsPlayers.size() + 1, true)
+                );
+            }
+        };
+        timer.schedule(announcementSendTask, 0, ANNOUNCEMENT_SEND_PERIOD);
     }
 
     private void registerNewMove(@NotNull Player player, @NotNull Direction direction) {
@@ -51,15 +90,14 @@ public class MasterNode implements
     }
 
     private void startGameUpdateTimer() {
-        TimerTask timerTask = new TimerTask() {
+        TimerTask gameUpdateTask = new TimerTask() {
             @Override
             public void run() {
                 game.makeAllPlayersMove(Map.copyOf(playersMoves));
                 playersMoves.clear();
             }
         };
-        Timer timer = new Timer();
-        timer.schedule(timerTask, 0, gameConfig.getStateDelayMs());
+        timer.schedule(gameUpdateTask, 0, gameConfig.getStateDelayMs());
     }
 
     @Override
@@ -68,7 +106,7 @@ public class MasterNode implements
                 .forEach(netNode ->
                         nodeHandler.sendMessage(
                                 netNode,
-                                new StateMessage(gameState)
+                                new StateMessage(gameState, Map.copyOf(registeredNodesAsPlayers))
                         )
                 );
         nodeHandler.updateState(gameState);
@@ -89,9 +127,57 @@ public class MasterNode implements
             case JOIN:
                 handle(sender, (JoinMessage) message);
                 break;
+            case PING:
+                handle(sender, (PingMessage) message);
+                break;
             default:
                 throw new IllegalStateException("Cant handle this message type = " + message.getType());
         }
+    }
+
+    public void startRemovingDisconnectedPlayers() {
+        TimerTask removeTask = getRemoveDisconnectedUsersTask();
+        timer.schedule(removeTask, 0, (long) gameConfig.getPingDelayMs() * 10);
+    }
+
+    @NotNull
+    private TimerTask getRemoveDisconnectedUsersTask() {
+        return new TimerTask() {
+            @Override
+            public void run() {
+                registeredNodesAsPlayers.forEach((neighbor, player) -> {
+                    if (isDisconnected(neighbor)) {
+                        game.removePlayer(player);
+                        playersMoves.remove(player);
+                    }
+                });
+                registeredNodesAsPlayers.keySet().removeIf(MasterNode.this::isDisconnected);
+                if (deputy != null && !registeredNodesAsPlayers.containsKey(deputy)) {
+                    deputy = null;
+                    chooseNewDeputy();
+                }
+            }
+        };
+    }
+
+    private void chooseNewDeputy() {
+        Optional<Neighbor> neighborOpt = registeredNodesAsPlayers.keySet().stream().findAny();
+        neighborOpt.ifPresentOrElse(
+                this::setDeputy,
+                () -> logger.warn("Cant chose deputy")
+        );
+    }
+
+    private void setDeputy(@NotNull NetNode deputy) {
+        this.deputy = deputy;
+        nodeHandler.sendMessage(
+                deputy,
+                new RoleChangeMessage(Role.MASTER, Role.DEPUTY)
+        );
+    }
+
+    private boolean isDisconnected(@NotNull Neighbor node) {
+        return DurationUtils.betweenInMs(node.getLastSeenTime(), Instant.now()) >= gameConfig.getNodeTimeoutMs();
     }
 
     @Override
@@ -102,20 +188,32 @@ public class MasterNode implements
 
     @Override
     public void handle(@NotNull NetNode sender, @NotNull JoinMessage joinMsg) {
-        if (registeredNodesAsPlayers.containsKey(sender)) {
+        if (registeredNodesAsPlayers.isEmpty()) {
+            setDeputy(sender);
+        }
+        Neighbor neighbor = new Neighbor(sender);
+        if (registeredNodesAsPlayers.containsKey(neighbor)) {
             logger.error("Node={} already registered as player={}", sender, registeredNodesAsPlayers.get(sender));
             throw new IllegalArgumentException("Node={" + sender + "} already registered");
         }
-        Player player = registerNewPlayer(sender, joinMsg.getPlayerName());
-        logger.debug("NetNode={} was successfully registered as player={}", sender, player);
+        registerNewPlayer(neighbor, joinMsg.getPlayerName())
+                .ifPresent(player ->
+                        logger.debug("NetNode={} was successfully registered as player={}", sender, player)
+                );
     }
 
-
     @NotNull
-    private Player registerNewPlayer(@NotNull NetNode sender, @NotNull String playerName) {
-        Player player = Player.create(playerName);
-        registeredNodesAsPlayers.put(sender, player);
-        return player;
+    private Optional<Player> registerNewPlayer(@NotNull Neighbor sender, @NotNull String playerName) {
+        try {
+            Player player = game.registrationNewPlayer(playerName);
+            registeredNodesAsPlayers.put(sender, player);
+            return Optional.of(player);
+        } catch (IllegalStateException e) {
+            logger.debug("Cant place player on field because no space");
+            nodeHandler.sendMessage(sender, new ErrorMessage("Cant place player on field because no space"));
+            return Optional.empty();
+        }
+
     }
 
     @Override
@@ -146,8 +244,35 @@ public class MasterNode implements
     @Override
     public void handle(@NotNull NetNode sender, @NotNull SteerMessage steerMsg) {
         checkRegistration(sender);
+        updateLastSeen(sender);
         Player senderAsPlayer = registeredNodesAsPlayers.get(sender);
         registerNewMove(senderAsPlayer, steerMsg.getDirection());
         logger.debug("NetNode={} as player={} make move with direction={}", sender, senderAsPlayer, steerMsg.getDirection());
+    }
+
+    @Override
+    public void handle(@NotNull NetNode sender, @NotNull PingMessage pingMessageHandler) {
+        updateLastSeen(sender);
+    }
+
+    private void updateLastSeen(@NotNull NetNode sender) {
+        registeredNodesAsPlayers.keySet().forEach(neighbor -> {
+            if (neighbor.equals(sender)) {
+                neighbor.updateLastSeenTime();
+            }
+        });
+    }
+
+    @Override
+    public void makeMove(@NotNull Direction direction) {
+        registerNewMove(currentPlayer, direction);
+    }
+
+    @Override
+    public void stop() {
+        if (deputy != null) {
+            nodeHandler.sendMessage(deputy, new RoleChangeMessage(Role.MASTER, Role.MASTER));
+        }
+        timer.cancel();
     }
 }

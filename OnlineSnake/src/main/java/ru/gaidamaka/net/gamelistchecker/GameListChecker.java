@@ -5,13 +5,14 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.gaidamaka.net.GameInfo;
+import ru.gaidamaka.net.NetNode;
 import ru.gaidamaka.net.messages.AnnouncementMessage;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -33,6 +34,18 @@ public class GameListChecker implements GameListObservable {
     public GameListChecker(@NotNull InetAddress multicastForPublishGameList, int port) {
         validateAddress(Objects.requireNonNull(multicastForPublishGameList));
         this.multicastForPublishGameList = multicastForPublishGameList;
+        this.port = port;
+        this.checkerThread = new Thread(getCheckerRunnable());
+    }
+
+    public GameListChecker(@NotNull String multicastHost, int port) {
+        try {
+            multicastForPublishGameList = InetAddress.getByName(multicastHost);
+        } catch (UnknownHostException e) {
+            logger.error("Wrong host={}", multicastHost);
+            throw new IllegalArgumentException("Wrong host=" + multicastHost);
+        }
+        validateAddress(Objects.requireNonNull(multicastForPublishGameList));
         this.port = port;
         this.checkerThread = new Thread(getCheckerRunnable());
     }
@@ -59,9 +72,10 @@ public class GameListChecker implements GameListObservable {
                 while (!Thread.currentThread().isInterrupted()) {
                     DatagramPacket datagramPacket = new DatagramPacket(buffer, BUFFER_SIZE);
                     socket.receive(datagramPacket);
+                    NetNode sender = new NetNode(datagramPacket.getAddress(), datagramPacket.getPort());
                     deserializeAnnouncementMessage(buffer).
                             ifPresent(announcementMessage -> {
-                                gameInfos.add(parseGameInfo(announcementMessage));
+                                gameInfos.add(parseGameInfo(sender, announcementMessage));
                                 notifyObservers();
                             });
                 }
@@ -81,12 +95,12 @@ public class GameListChecker implements GameListObservable {
     }
 
     @Override
-    public void addObserver(@NotNull GameListObserver observer) {
+    public void addGameListObserver(@NotNull GameListObserver observer) {
         observers.add(observer);
     }
 
     @Override
-    public void removeObserver(@NotNull GameListObserver observer) {
+    public void removeGameListObserver(@NotNull GameListObserver observer) {
         observers.remove(observer);
     }
 
@@ -99,9 +113,10 @@ public class GameListChecker implements GameListObservable {
         }
     }
 
-    private GameInfo parseGameInfo(@NotNull AnnouncementMessage announcementMsg) {
+    private GameInfo parseGameInfo(@NotNull NetNode sender, @NotNull AnnouncementMessage announcementMsg) {
         return new GameInfo(
                 announcementMsg.getConfig(),
+                sender,
                 announcementMsg.getPlayersNumber(),
                 announcementMsg.canJoin()
         );

@@ -1,17 +1,22 @@
-package ru.gaidamaka.net;
+package ru.gaidamaka.net.gamelistchecker;
 
 import org.jetbrains.annotations.NotNull;
 import ru.gaidamaka.config.GameConfig;
+import ru.gaidamaka.net.NetNode;
 
 import java.util.Objects;
 
 public class GameInfo {
+    @NotNull
     private final GameConfig config;
     private final boolean canJoin;
     private final int playersNumber;
+    @NotNull
+    private final NetNode masterNode;
 
-    public GameInfo(@NotNull GameConfig config, int playersNumber, boolean canJoin) {
+    public GameInfo(@NotNull GameConfig config, @NotNull NetNode masterNode, int playersNumber, boolean canJoin) {
         this.config = Objects.requireNonNull(config);
+        this.masterNode = Objects.requireNonNull(masterNode);
         this.canJoin = canJoin;
         this.playersNumber = playersNumber;
     }
@@ -29,6 +34,11 @@ public class GameInfo {
         return playersNumber;
     }
 
+    @NotNull
+    public NetNode getMasterNode() {
+        return masterNode;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -42,5 +52,15 @@ public class GameInfo {
     @Override
     public int hashCode() {
         return Objects.hash(config, canJoin, playersNumber);
+    }
+
+    @Override
+    public String toString() {
+        return "GameInfo{" +
+                "config=" + config +
+                ", canJoin=" + canJoin +
+                ", playersNumber=" + playersNumber +
+                ", masterNode=" + masterNode +
+                '}';
     }
 }

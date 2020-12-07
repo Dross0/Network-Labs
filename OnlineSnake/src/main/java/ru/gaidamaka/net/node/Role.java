@@ -1,4 +1,4 @@
-package ru.gaidamaka.net;
+package ru.gaidamaka.net.node;
 
 public enum Role {
     NORMAL,

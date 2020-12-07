@@ -7,6 +7,7 @@ import ru.gaidamaka.game.cell.Point;
 import ru.gaidamaka.game.player.PlayerWithScore;
 
 import java.util.List;
+import java.util.Set;
 
 public interface View {
     void drawFruit(@NotNull Point point);
@@ -20,4 +21,6 @@ public interface View {
     void showUserListInfo(@NotNull List<PlayerWithScore> playerWithScoreList);
 
     void setConfig(@NotNull GameConfig gameConfig);
+
+    void showGameList(@NotNull Set<GameInfoWithButton> gameInfoWithButtons);
 }
