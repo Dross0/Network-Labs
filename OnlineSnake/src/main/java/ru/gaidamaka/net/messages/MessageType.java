@@ -1,12 +1,23 @@
 package ru.gaidamaka.net.messages;
 
 public enum MessageType {
-    STATE,
-    ACK,
-    PING,
-    ROLE_CHANGE,
-    STEER,
-    ANNOUNCEMENT,
-    JOIN,
-    ERROR
+    STATE(true),
+    ACK(false),
+    PING(false),
+    ROLE_CHANGE(true),
+    STEER(true),
+    ANNOUNCEMENT(false),
+    JOIN(true),
+    ERROR(false);
+
+
+    final boolean needConfirmation;
+
+    MessageType(boolean needConfirmation) {
+        this.needConfirmation = needConfirmation;
+    }
+
+    public boolean isNeedConfirmation() {
+        return needConfirmation;
+    }
 }

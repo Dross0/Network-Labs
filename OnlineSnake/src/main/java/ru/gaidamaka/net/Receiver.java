@@ -5,6 +5,7 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.gaidamaka.net.messages.AckMessage;
 import ru.gaidamaka.net.messages.Message;
 
 import java.io.IOException;
@@ -38,8 +39,12 @@ public class Receiver implements Runnable {
                 socket.receive(packet);
                 NetNode sender = parseSender(packet);
                 parseMessage(packet)
-                        .ifPresent(message ->
-                                storage.addReceivedMessage(sender, message)
+                        .ifPresent(message -> {
+                                    storage.addReceivedMessage(sender, message);
+                                    if (message.getType().isNeedConfirmation()) {
+                                        storage.addMessageToSend(sender, new AckMessage(message.getUuid()));
+                                    }
+                                }
                         );
             } catch (IOException e) {
                 logger.error("Cant receive packet", e);
