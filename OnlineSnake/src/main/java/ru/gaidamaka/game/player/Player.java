@@ -4,18 +4,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.util.Objects;
-import java.util.UUID;
 
 public class Player implements Serializable {
     @NotNull
     private final String name;
 
-    @NotNull
-    private final UUID uuid;
-
     private Player(@NotNull String name) {
         this.name = name;
-        this.uuid = UUID.randomUUID();
     }
 
     public static Player create(@NotNull String name) {
@@ -25,11 +20,6 @@ public class Player implements Serializable {
     @NotNull
     public String getName() {
         return name;
-    }
-
-    @NotNull
-    public UUID getUuid() {
-        return uuid;
     }
 
     @Override

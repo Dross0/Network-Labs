@@ -192,14 +192,23 @@ public class MasterNode implements
             setDeputy(sender);
         }
         Neighbor neighbor = new Neighbor(sender);
-        if (registeredNodesAsPlayers.containsKey(neighbor)) {
-            logger.error("Node={} already registered as player={}", sender, registeredNodesAsPlayers.get(sender));
-            throw new IllegalArgumentException("Node={" + sender + "} already registered");
-        }
+        validateNewPlayer(sender, joinMsg.getPlayerName(), neighbor);
         registerNewPlayer(neighbor, joinMsg.getPlayerName())
                 .ifPresent(player ->
                         logger.debug("NetNode={} was successfully registered as player={}", sender, player)
                 );
+    }
+
+    private void validateNewPlayer(@NotNull NetNode sender, @NotNull String playerName, Neighbor neighbor) {
+        if (registeredNodesAsPlayers.containsKey(neighbor)) {
+            logger.error("Node={} already registered as player={}", sender, registeredNodesAsPlayers.get(neighbor));
+            nodeHandler.sendMessage(sender, new ErrorMessage("Player already exist"));
+            throw new IllegalArgumentException("Node={" + sender + "} already registered");
+        } else if (currentPlayer.equals(Player.create(playerName))) {
+            logger.error("Node={} trying register with master name={}", sender, playerName);
+            nodeHandler.sendMessage(sender, new ErrorMessage("Player name is taken by master"));
+            throw new IllegalArgumentException("Try register with master name=" + playerName);
+        }
     }
 
     @NotNull
