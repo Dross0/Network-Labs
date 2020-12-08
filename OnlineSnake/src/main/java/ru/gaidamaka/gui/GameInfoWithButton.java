@@ -1,6 +1,11 @@
 package ru.gaidamaka.gui;
 
+import javafx.geometry.Insets;
 import javafx.scene.control.Button;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
 import ru.gaidamaka.config.Config;
 import ru.gaidamaka.config.GameConfig;
@@ -32,6 +37,12 @@ public class GameInfoWithButton {
         this.fieldSize = config.getFieldHeight() + "x" + config.getFieldWidth();
         this.foodNumber = config.getFoodStaticNumber() + ": x" + config.getFoodPerPlayer();
         this.masterNodeName = ((Config) config).getPlayerName();
+        designButton();
+    }
+
+    private void designButton() {
+        button.setBackground(new Background(new BackgroundFill(Color.BLUE, new CornerRadii(0), new Insets(0))));
+        button.setTextFill(Color.WHITE);
     }
 
     @NotNull
