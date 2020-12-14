@@ -3,8 +3,8 @@ package ru.gaidamaka.attachment;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.gaidamaka.SOCKSErrorCode;
 import ru.gaidamaka.dns.DNSResolver;
+import ru.gaidamaka.socks.SOCKSErrorCode;
 import ru.gaidamaka.utils.PortValidator;
 import ru.gaidamaka.utils.SelectionKeyUtils;
 

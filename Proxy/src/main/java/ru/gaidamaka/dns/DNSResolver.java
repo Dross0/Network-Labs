@@ -4,10 +4,10 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
-import ru.gaidamaka.SOCKSErrorCode;
 import ru.gaidamaka.attachment.Attachment;
 import ru.gaidamaka.attachment.AttachmentType;
 import ru.gaidamaka.attachment.ClientHandler;
+import ru.gaidamaka.socks.SOCKSErrorCode;
 import ru.gaidamaka.utils.SelectionKeyUtils;
 
 import java.io.Closeable;
@@ -29,8 +29,8 @@ public class DNSResolver extends Attachment implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(DNSResolver.class);
     private static final int DNS_DEFAULT_PORT = 53;
     private static final int QUEUE_CAPACITY = 100;
-    private static final Random random = new Random();
     private static final int RECEIVER_BUFFER_CAPACITY = 1024;
+    private static final Random random = new Random();
 
     private final DatagramChannel resolverSocket;
     private final InetSocketAddress dnsAddress;
@@ -71,7 +71,7 @@ public class DNSResolver extends Attachment implements Closeable {
     }
 
 
-    private void closeWithoutException() {
+    public void closeWithoutException() {
         try {
             if (resolverSocket != null) {
                 resolverSocket.close();
@@ -93,7 +93,6 @@ public class DNSResolver extends Attachment implements Closeable {
     public void close() throws IOException {
         resolverSocket.close();
     }
-
 
     public void sendRequest() {
         if (requestQueue.isEmpty()) {
@@ -160,6 +159,7 @@ public class DNSResolver extends Attachment implements Closeable {
         return dnsResolveRequest;
     }
 
+    @NotNull
     private Message readMessage() {
         try {
             receiverBuffer.clear();

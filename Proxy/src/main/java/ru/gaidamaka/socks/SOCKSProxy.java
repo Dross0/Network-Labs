@@ -1,4 +1,4 @@
-package ru.gaidamaka;
+package ru.gaidamaka.socks;
 
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -73,7 +73,6 @@ public class SOCKSProxy implements Closeable {
         return new InetSocketAddress(InetAddress.getByName("localhost"), port);
     }
 
-
     public void start() {
         try {
             while (selector.select() > -1) {
@@ -119,6 +118,15 @@ public class SOCKSProxy implements Closeable {
     }
 
     private void handle(@NotNull ServerHandler serverHandler) {
+        try {
+            workWithServerHandler(serverHandler);
+        } catch (Exception e) {
+            logger.error("Proxy catch exception at server handler", e);
+            serverHandler.closeWithoutException();
+        }
+    }
+
+    private void workWithServerHandler(@NotNull ServerHandler serverHandler) {
         if (!serverHandler.isConnected()) {
             serverHandler.connect();
         } else if (serverHandler.isReadable()) {
@@ -147,9 +155,8 @@ public class SOCKSProxy implements Closeable {
                 resolver.receiveRequest();
             }
         } catch (IllegalStateException e) {
-            logger.error("Error while resolver work", e);
-            resolver.close();
-            return;
+            logger.error("Proxy catch exception at DNS resolver", e);
+            resolver.closeWithoutException();
         }
     }
 

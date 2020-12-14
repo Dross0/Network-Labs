@@ -1,4 +1,4 @@
-package ru.gaidamaka;
+package ru.gaidamaka.socks;
 
 public enum SOCKSErrorCode {
     SUCCESS(0x00),

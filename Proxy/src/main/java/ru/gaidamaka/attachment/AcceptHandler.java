@@ -21,6 +21,7 @@ public class AcceptHandler extends Attachment {
         this.serverSocketChannel = Objects.requireNonNull(serverSocketChannel, "Server socket channel cant be null");
     }
 
+    @NotNull
     public SocketChannel accept() {
         try {
             SocketChannel socketChannel = serverSocketChannel.accept();
