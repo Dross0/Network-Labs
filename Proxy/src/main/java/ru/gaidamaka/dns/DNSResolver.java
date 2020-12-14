@@ -4,8 +4,11 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
-import ru.gaidamaka.ClientHandler;
-import ru.gaidamaka.SOCKSErrorCodes;
+import ru.gaidamaka.SOCKSErrorCode;
+import ru.gaidamaka.attachment.Attachment;
+import ru.gaidamaka.attachment.AttachmentType;
+import ru.gaidamaka.attachment.ClientHandler;
+import ru.gaidamaka.utils.SelectionKeyUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -22,7 +25,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DNSResolver implements Closeable {
+public class DNSResolver extends Attachment implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(DNSResolver.class);
     private static final int DNS_DEFAULT_PORT = 53;
     private static final int QUEUE_CAPACITY = 100;
@@ -38,6 +41,7 @@ public class DNSResolver implements Closeable {
     private final ByteBuffer receiverBuffer = ByteBuffer.allocate(RECEIVER_BUFFER_CAPACITY);
 
     public DNSResolver(@NotNull Selector selector) {
+        super(AttachmentType.DNS_RESOLVER);
         Objects.requireNonNull(selector, "Selector cant be null");
         try {
             resolverSocket = DatagramChannel.open();
@@ -47,7 +51,7 @@ public class DNSResolver implements Closeable {
             resolverKey.interestOps(SelectionKey.OP_READ);
             dnsAddress = new InetSocketAddress(ResolverConfig.getCurrentConfig().server(), DNS_DEFAULT_PORT);
         } catch (IOException e) {
-            closeWithError();
+            closeWithoutException();
             throw new IllegalStateException("Cant create DNSResolver");
         }
     }
@@ -63,18 +67,11 @@ public class DNSResolver implements Closeable {
                 requestQueue,
                 new DNSResolveRequest(hostToResolve, clientHandler)
         );
-        turnOnWritableOption();
+        SelectionKeyUtils.turnOnWriteOption(resolverKey);
     }
 
-    private void turnOnWritableOption() {
-        resolverKey.interestOpsOr(SelectionKey.OP_WRITE);
-    }
 
-    private void turnOffWritableOption() {
-        resolverKey.interestOpsAnd(~SelectionKey.OP_WRITE);
-    }
-
-    private void closeWithError() {
+    private void closeWithoutException() {
         try {
             if (resolverSocket != null) {
                 resolverSocket.close();
@@ -82,6 +79,14 @@ public class DNSResolver implements Closeable {
         } catch (IOException e) {
             logger.error("Error while closing", e);
         }
+    }
+
+    public boolean isReadable() {
+        return resolverKey.isReadable();
+    }
+
+    public boolean isWritable() {
+        return resolverKey.isWritable();
     }
 
     @Override
@@ -92,7 +97,7 @@ public class DNSResolver implements Closeable {
 
     public void sendRequest() {
         if (requestQueue.isEmpty()) {
-            turnOffWritableOption();
+            SelectionKeyUtils.turnOffWriteOption(resolverKey);
             return;
         }
         DNSResolveRequest dnsResolveRequest = dnsQueueStrategy.takeResolveRequest(requestQueue);
@@ -140,7 +145,7 @@ public class DNSResolver implements Closeable {
                 )
                 .findFirst()
                 .ifPresentOrElse(record -> clientHandler.connect(((ARecord) record).getAddress()),
-                        () -> clientHandler.createResponse(SOCKSErrorCodes.DESTINATION_HOST_UNREACHABLE));
+                        () -> clientHandler.createResponse(SOCKSErrorCode.DESTINATION_HOST_UNREACHABLE));
 
     }
 

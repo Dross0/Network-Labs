@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.OptionalInt;
 
 public class Main {
@@ -16,10 +17,15 @@ public class Main {
             logger.error("Wrong arguments number, expected={}, actual={}", ARGUMENTS_NUMBER, args.length);
             return;
         }
-        parsePort(args[PORT_ARGUMENT_INDEX]).ifPresent(port -> {
-            SOCKSProxy proxy = new SOCKSProxy(port);
+        parsePort(args[PORT_ARGUMENT_INDEX]).ifPresent(Main::startProxy);
+    }
+
+    private static void startProxy(int port) {
+        try (SOCKSProxy proxy = new SOCKSProxy(port)) {
             proxy.start();
-        });
+        } catch (IOException e) {
+            logger.error("Proxy close exception", e);
+        }
     }
 
     private static OptionalInt parsePort(@NotNull String portStr) {

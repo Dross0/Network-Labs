@@ -1,7 +1,7 @@
 package ru.gaidamaka.dns;
 
 import lombok.Data;
-import ru.gaidamaka.ClientHandler;
+import ru.gaidamaka.attachment.ClientHandler;
 
 @Data
 public class DNSResolveRequest {
