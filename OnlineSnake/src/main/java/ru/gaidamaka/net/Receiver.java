@@ -18,6 +18,7 @@ public class Receiver implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Receiver.class);
     private static final int INITIAL_PACKET_SIZE = 8096;
     private static final int MAX_PACKET_SIZE = 65535;
+
     @NotNull
     private final MessageStorage storage;
 

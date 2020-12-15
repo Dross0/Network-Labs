@@ -14,7 +14,7 @@ public final class ConfigReader {
     private ConfigReader() {
     }
 
-    public static Config readProtoConfig(@NotNull String configPath) {
+    public static Config readConfig(@NotNull String configPath) {
         Objects.requireNonNull(configPath, "Config path cant be null");
         try (InputStream cfgStream = ConfigReader.class.getClassLoader().getResourceAsStream(configPath)) {
             Properties properties = new Properties();

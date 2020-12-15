@@ -30,11 +30,14 @@ import java.util.*;
 public class MainNodeHandler implements NodeHandler, GameObservable, GameListObserver, GameListObservable {
     private static final Logger logger = LoggerFactory.getLogger(MainNodeHandler.class);
 
+    @NotNull
     private final List<GameObserver> gameStateObservers = new ArrayList<>();
+    @NotNull
     private final List<GameListObserver> gameListObservers = new ArrayList<>();
     private final Sender sender;
     private final Thread senderThread;
     private final Thread receiverThread;
+    @NotNull
     private final InetSocketAddress multicastInfo;
 
     private NetNode master;
@@ -45,14 +48,14 @@ public class MainNodeHandler implements NodeHandler, GameObservable, GameListObs
     private Config config;
     private GameState gameState;
 
-    private final Timer timer;
+    private final Timer timer = new Timer();
     private final GameListChecker gameListChecker;
 
     public MainNodeHandler(@NotNull Role nodeRole,
                            @NotNull Config config,
                            int port,
                            @NotNull InetAddress multicastAddress,
-                           @NotNull int multicastPort) {
+                           int multicastPort) {
         DatagramSocket socket;
         try {
             socket = new DatagramSocket(port);
@@ -61,18 +64,23 @@ public class MainNodeHandler implements NodeHandler, GameObservable, GameListObs
             throw new IllegalStateException("Cant create socket", e);
         }
         messageStorage = new MessageStorage();
+        try {
+            sender = new Sender(messageStorage, socket, config.getPingDelayMs());
+            gameListChecker = new GameListChecker(multicastAddress, multicastPort);
+        } catch (RuntimeException e) {
+            exit();
+            logger.error("Catch exception while creating sender or game list checker", e);
+            throw new IllegalStateException("Catch exception while creating sender or game list checker", e);
+        }
         setConfig(config);
-        sender = new Sender(messageStorage, socket, config.getPingDelayMs());
-        senderThread = new Thread(sender);
         Receiver receiver = new Receiver(messageStorage, socket);
+        senderThread = new Thread(sender);
         receiverThread = new Thread(receiver);
         senderThread.start();
         receiverThread.start();
         multicastInfo = new InetSocketAddress(multicastAddress, multicastPort);
-        gameListChecker = new GameListChecker(multicastAddress, multicastPort);
         gameListChecker.addGameListObserver(this);
         gameListChecker.start();
-        timer = new Timer();
         startSendPingMessages();
         startHandleReceivedMessages();
         changeNodeRole(nodeRole);
@@ -133,6 +141,7 @@ public class MainNodeHandler implements NodeHandler, GameObservable, GameListObs
     public void changeNodeRole(@NotNull Role nodeRole) {
         if (config == null) {
             logger.error("Cant change role={} to {} without config", this.nodeRole, nodeRole);
+            exit();
             throw new IllegalStateException("Cant change role without config");
         }
         if (gameNode != null) {
@@ -149,6 +158,8 @@ public class MainNodeHandler implements NodeHandler, GameObservable, GameListObs
     @Override
     public void changeNodeRole(@NotNull Role nodeRole, @NotNull GameRecoveryInformation gameRecoveryInformation) {
         if (nodeRole != Role.MASTER) {
+            exit();
+            logger.error("Cant change role with game state if is not master, actual={}", nodeRole);
             throw new IllegalStateException("Cant change role with game state if is not master, actual" + nodeRole);
         }
         gameNode = new MasterNode(config, gameRecoveryInformation);
@@ -210,7 +221,8 @@ public class MainNodeHandler implements NodeHandler, GameObservable, GameListObs
     }
 
     @Override
-    public @NotNull NetNode getMaster() {
+    @NotNull
+    public NetNode getMaster() {
         return master;
     }
 
@@ -220,10 +232,18 @@ public class MainNodeHandler implements NodeHandler, GameObservable, GameListObs
     }
 
     public void exit() {
-        gameListChecker.stop();
-        gameNode.stop();
-        receiverThread.interrupt();
-        senderThread.interrupt();
+        if (gameListChecker != null) {
+            gameListChecker.stop();
+        }
+        if (gameNode != null) {
+            gameNode.stop();
+        }
+        if (receiverThread != null) {
+            receiverThread.interrupt();
+        }
+        if (receiverThread != null) {
+            senderThread.interrupt();
+        }
         timer.cancel();
     }
 

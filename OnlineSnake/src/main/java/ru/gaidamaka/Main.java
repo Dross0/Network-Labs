@@ -40,7 +40,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        Config config = ConfigReader.readProtoConfig(CONFIG_PATH);
+        Config config = ConfigReader.readConfig(CONFIG_PATH);
         try {
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(Main.class.getClassLoader().getResource(GAME_VIEW_FXML_PATH));
