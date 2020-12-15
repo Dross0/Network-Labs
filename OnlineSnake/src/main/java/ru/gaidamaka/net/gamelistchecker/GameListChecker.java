@@ -9,16 +9,14 @@ import ru.gaidamaka.net.NetNode;
 import ru.gaidamaka.net.messages.AnnouncementMessage;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameListChecker implements GameListObservable {
     private static final Logger logger = LoggerFactory.getLogger(GameListChecker.class);
     private static final int BUFFER_SIZE = 1024;
+    private static final int SO_TIMEOUT_MS = 3000;
 
     @NotNull
     private final List<GameListObserver> observers = new CopyOnWriteArrayList<>();
@@ -68,10 +66,15 @@ public class GameListChecker implements GameListObservable {
         return () -> {
             try (MulticastSocket socket = new MulticastSocket(port)) {
                 socket.joinGroup(multicastForPublishGameList);
+                socket.setSoTimeout(SO_TIMEOUT_MS);
                 byte[] buffer = new byte[BUFFER_SIZE];
                 while (!Thread.currentThread().isInterrupted()) {
                     DatagramPacket datagramPacket = new DatagramPacket(buffer, BUFFER_SIZE);
-                    socket.receive(datagramPacket);
+                    try {
+                        socket.receive(datagramPacket);
+                    } catch (SocketTimeoutException e) {
+                        continue;
+                    }
                     NetNode sender = new NetNode(datagramPacket.getAddress(), datagramPacket.getPort());
                     deserializeAnnouncementMessage(buffer).
                             ifPresent(announcementMessage -> {
