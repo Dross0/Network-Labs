@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public class SteerMessage extends Message {
     @NotNull
-    private Direction direction;
+    private final Direction direction;
 
     public SteerMessage(@NotNull Direction direction) {
         super(MessageType.STEER);

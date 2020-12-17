@@ -2,19 +2,23 @@ package ru.gaidamaka.net.messages;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
+import java.nio.charset.StandardCharsets;
+
 
 public class JoinMessage extends Message {
-    @NotNull
-    private final String playerName;
+    private final byte[] utf8Buffer;
+    private transient String playerName;
 
     public JoinMessage(@NotNull String playerName) {
         super(MessageType.JOIN);
-        this.playerName = Objects.requireNonNull(playerName, "Player name cant be null");
+        this.utf8Buffer = StandardCharsets.UTF_8.encode(playerName).array();
     }
 
     @NotNull
     public String getPlayerName() {
+        if (playerName == null) {
+            playerName = new String(utf8Buffer, StandardCharsets.UTF_8);
+        }
         return playerName;
     }
 }
